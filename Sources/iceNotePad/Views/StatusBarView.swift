@@ -76,3 +76,4 @@ public struct StatusBarView: View {
         )
     }
 }
+

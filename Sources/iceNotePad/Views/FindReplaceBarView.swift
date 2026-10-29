@@ -183,3 +183,4 @@ public struct FindReplaceBarView: View {
         )
     }
 }
+
