@@ -53,15 +53,15 @@ iceNotePad/
 - **Files**: `Package.swift`, `Sources/iceNotePad/Models/NoteTab.swift`, `Sources/iceNotePad/Models/TabManager.swift`, `Tests/iceNotePadTests/TabManagerTests.swift`
 - **Goal**: Establish the Swift package structure, `NoteTab` model, and `TabManager` with robust persistence logic (saving to and loading from JSON in Application Support).
 - **Steps**:
-  - [ ] Initialize `Package.swift` with macOS 13+ target.
-  - [ ] Write unit tests in `TabManagerTests.swift` verifying:
+  - [x] Initialize `Package.swift` with macOS 13+ target.
+  - [x] Write unit tests in `TabManagerTests.swift` verifying:
     - Adding tabs, closing tabs, switching active tab.
     - Saving tabs to JSON and restoring tabs on reload.
     - Preserving unsaved tab contents when reopening.
-  - [ ] Implement `NoteTab.swift` (Codable, Identifiable, ObservableObject).
-  - [ ] Implement `TabManager.swift` with auto-save debounce and session restoration.
-  - [ ] Run `swift test` and ensure all tests pass.
-  - [ ] Git commit.
+  - [x] Implement `NoteTab.swift` (Codable, Identifiable, ObservableObject).
+  - [x] Implement `TabManager.swift` with auto-save debounce and session restoration.
+  - [x] Run `swift test` and ensure all tests pass.
+  - [x] Git commit.
 
 ### Task 2: Plain Text Editor with Strict Format Stripping (AppKit NSTextView)
 - **Files**: `Sources/iceNotePad/Views/PlainTextEditorView.swift`
@@ -71,11 +71,11 @@ iceNotePad/
   - Reports cursor position (Line number, Column number) and selection changes to the parent model.
   - Supports dynamic font scaling (Zoom).
 - **Steps**:
-  - [ ] Create `PlainTextEditorView.swift` implementing `NSViewRepresentable`.
-  - [ ] Subclass `NSTextView` to override `paste(_:)` and `readSelection(from: [NSPasteboard.PasteboardType])` ensuring only plain string is inserted.
-  - [ ] Connect text storage changes and selection changes to update `NoteTab.content`, `cursorLine`, and `cursorColumn`.
-  - [ ] Run `swift build` to verify clean compilation.
-  - [ ] Git commit.
+  - [x] Create `PlainTextEditorView.swift` implementing `NSViewRepresentable`.
+  - [x] Subclass `NSTextView` to override `paste(_:)` and `readSelection(from: [NSPasteboard.PasteboardType])` ensuring only plain string is inserted.
+  - [x] Connect text storage changes and selection changes to update `NoteTab.content`, `cursorLine`, and `cursorColumn`.
+  - [x] Run `swift build` to verify clean compilation.
+  - [x] Git commit.
 
 ### Task 3: Multi-Tab Bar & Main UI Layout
 - **Files**: `Sources/iceNotePad/Views/TabBarView.swift`, `Sources/iceNotePad/Views/StatusBarView.swift`, `Sources/iceNotePad/Views/FindReplaceBarView.swift`, `Sources/iceNotePad/Views/MainWindowView.swift`
@@ -84,12 +84,12 @@ iceNotePad/
   - Status Bar: Line / Col, character count, encoding ("UTF-8"), line endings ("Windows (CRLF)" / "Unix (LF)"), Zoom percentage.
   - In-window Find & Replace bar with Next/Previous, Match case, and Replace All.
 - **Steps**:
-  - [ ] Implement `TabBarView.swift` with smooth tab switching and hover close buttons.
-  - [ ] Implement `StatusBarView.swift` with live metrics.
-  - [ ] Implement `FindReplaceBarView.swift` with search term highlighting and text replacement.
-  - [ ] Assemble `MainWindowView.swift` coordinating tab bar, active editor, find bar, and status bar.
-  - [ ] Run `swift build` and test UI integration.
-  - [ ] Git commit.
+  - [x] Implement `TabBarView.swift` with smooth tab switching and hover close buttons.
+  - [x] Implement `StatusBarView.swift` with live metrics.
+  - [x] Implement `FindReplaceBarView.swift` with search term highlighting and text replacement.
+  - [x] Assemble `MainWindowView.swift` coordinating tab bar, active editor, find bar, and status bar.
+  - [x] Run `swift build` and test UI integration.
+  - [x] Git commit.
 
 ### Task 4: File Operations, App Menu Commands & Global Shortcuts
 - **Files**: `Sources/iceNotePad/Helpers/FileOperations.swift`, `Sources/iceNotePad/App/MenuCommands.swift`, `Sources/iceNotePad/App/iceNotePadApp.swift`
@@ -103,21 +103,21 @@ iceNotePad/
   - `Cmd+F`: Toggle Find/Replace
   - `Cmd++`, `Cmd+-`, `Cmd+0`: Zoom controls
 - **Steps**:
-  - [ ] Implement `FileOperations.swift` with native `NSOpenPanel` and `NSSavePanel`.
-  - [ ] Implement `MenuCommands.swift` with standard keyboard shortcuts.
-  - [ ] Connect `iceNotePadApp.swift` to handle window lifecycle and persist session on quit.
-  - [ ] Run `swift build` and execute tests.
-  - [ ] Git commit.
+  - [x] Implement `FileOperations.swift` with native `NSOpenPanel` and `NSSavePanel`.
+  - [x] Implement `MenuCommands.swift` with standard keyboard shortcuts.
+  - [x] Connect `iceNotePadApp.swift` to handle window lifecycle and persist session on quit.
+  - [x] Run `swift build` and execute tests.
+  - [x] Git commit.
 
 ### Task 5: Packaging into Standalone `iceNotePad.app` & Verification
 - **Files**: `scripts/build_app.sh`, `scripts/generate_icon.swift`, `Info.plist`
 - **Goal**: Bundle the compiled binary into a standalone macOS `.app` bundle with an icon, test launching it, verify tab persistence and format stripping.
 - **Steps**:
-  - [ ] Create icon generator script to render a sleek Notepad-style icon and convert to `.icns`.
-  - [ ] Create `scripts/build_app.sh` that compiles in release mode (`-c release`), sets up `iceNotePad.app/Contents/MacOS`, `Info.plist`, and `Resources`.
-  - [ ] Run the build script to produce `build/iceNotePad.app`.
-  - [ ] Verify that opening `iceNotePad.app`, typing in multiple tabs, closing the app, and reopening it restores all tabs seamlessly.
-  - [ ] Verify rich text pasting strips all formatting into pure text.
-  - [ ] Provide user with clear instructions and install shortcut.
-  - [ ] Git commit.
+  - [x] Create icon generator script to render a sleek Notepad-style icon and convert to `.icns`.
+  - [x] Create `scripts/build_app.sh` that compiles in release mode (`-c release`), sets up `iceNotePad.app/Contents/MacOS`, `Info.plist`, and `Resources`.
+  - [x] Run the build script to produce `build/iceNotePad.app`.
+  - [x] Verify that opening `iceNotePad.app`, typing in multiple tabs, closing the app, and reopening it restores all tabs seamlessly.
+  - [x] Verify rich text pasting strips all formatting into pure text.
+  - [x] Provide user with clear instructions and install shortcut.
+  - [x] Git commit.
 
