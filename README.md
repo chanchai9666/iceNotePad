@@ -55,3 +55,12 @@ cp -r build/iceNotePad.app /Applications/
 ```bash
 ./scripts/build_app.sh
 ```
+
+---
+
+## ลิขสิทธิ์ (License)
+
+โปรเจกต์นี้เผยแพร่ภายใต้สัญญาอนุญาต [MIT License](LICENSE)
+Copyright (c) 2026 chanchai (cjiceko@gmail.com)
+
+

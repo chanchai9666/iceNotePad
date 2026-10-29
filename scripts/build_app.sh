@@ -52,6 +52,8 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <string>1.0.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026 chanchai (cjiceko@gmail.com). All rights reserved.</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>CFBundleIconFile</key>
