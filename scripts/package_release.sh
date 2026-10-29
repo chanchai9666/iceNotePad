@@ -20,3 +20,4 @@ hdiutil create -volname "iceNotePad" -srcfolder build/iceNotePad.app -ov -format
 echo "==> Done! Release packages created at:"
 echo "    - build/iceNotePad.dmg"
 echo "    - build/iceNotePad.zip"
+
