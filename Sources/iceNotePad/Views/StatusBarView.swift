@@ -4,12 +4,20 @@ public struct StatusBarView: View {
     public let line: Int
     public let column: Int
     public let text: String
+    public let encoding: String
     @ObservedObject public var settings: AppSettings
 
-    public init(line: Int, column: Int, text: String, settings: AppSettings) {
+    public init(
+        line: Int,
+        column: Int,
+        text: String,
+        encoding: String = "UTF-8",
+        settings: AppSettings
+    ) {
         self.line = line
         self.column = column
         self.text = text
+        self.encoding = encoding
         self.settings = settings
     }
 
@@ -60,7 +68,7 @@ public struct StatusBarView: View {
             Divider()
                 .frame(height: 12)
 
-            Text("UTF-8")
+            Text(encoding)
                 .fixedSize()
         }
         .font(.system(size: 11))
@@ -76,4 +84,3 @@ public struct StatusBarView: View {
         )
     }
 }
-

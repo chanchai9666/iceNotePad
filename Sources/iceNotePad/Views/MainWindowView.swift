@@ -84,6 +84,7 @@ public struct MainWindowView: View {
                     line: tab.cursorLine,
                     column: tab.cursorColumn,
                     text: tab.content,
+                    encoding: tab.encodingName,
                     settings: settings
                 )
             }

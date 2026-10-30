@@ -22,16 +22,8 @@ public struct IceNotePadCommands: Commands {
             .keyboardShortcut("n", modifiers: .command)
 
             Button("Open...") {
-                FileOperations.openFile { url, content in
-                    // If active tab is untitled and empty, replace it
-                    if let active = tabManager.activeTab, active.content.isEmpty, active.fileURL == nil {
-                        tabManager.updateContent(for: active.id, newContent: content)
-                        tabManager.markSaved(id: active.id, fileURL: url)
-                    } else {
-                        // Otherwise open in a new tab
-                        let tab = tabManager.newTab(title: url.lastPathComponent, content: content, fileURL: url)
-                        tabManager.markSaved(id: tab.id, fileURL: url)
-                    }
+                FileOperations.openFile { url, content, encoding in
+                    tabManager.openDocument(url: url, content: content, encodingName: encoding)
                 }
             }
             .keyboardShortcut("o", modifiers: .command)
@@ -59,7 +51,11 @@ public struct IceNotePadCommands: Commands {
             Divider()
 
             Button("Close Tab") {
-                tabManager.closeCurrentTab()
+                if tabManager.tabs.count <= 1 {
+                    NSApplication.shared.keyWindow?.performClose(nil)
+                } else {
+                    tabManager.closeCurrentTab()
+                }
             }
             .keyboardShortcut("w", modifiers: .command)
         }

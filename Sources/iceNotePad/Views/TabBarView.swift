@@ -51,10 +51,6 @@ public struct TabBarView: View {
                 .padding(.horizontal, 4)
                 .padding(.vertical, 4)
             }
-            .contentShape(Rectangle())
-            .onTapGesture(count: 2) {
-                handleEmptyAreaDoubleClick()
-            }
 
             // '+' New Tab button
             Button(action: {
@@ -72,9 +68,10 @@ public struct TabBarView: View {
             Color.clear
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
-                .onTapGesture(count: 2) {
-                    handleEmptyAreaDoubleClick()
-                }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            handleEmptyAreaDoubleClick()
         }
         .frame(height: 34)
         .background(Color(NSColor.windowBackgroundColor))
@@ -84,9 +81,9 @@ public struct TabBarView: View {
                 .foregroundColor(Color(NSColor.separatorColor)),
             alignment: .bottom
         )
-        .alert("เปลี่ยนชื่อไฟล์", isPresented: $isShowingRenameAlert) {
-            TextField("ชื่อไฟล์ใหม่", text: $renameInput)
-            Button("เปลี่ยนชื่อ") {
+        .alert("Rename File", isPresented: $isShowingRenameAlert) {
+            TextField("New file name", text: $renameInput)
+            Button("Rename") {
                 if let tab = tabToRename {
                     do {
                         try tabManager.renameTab(id: tab.id, newName: renameInput)
@@ -96,18 +93,18 @@ public struct TabBarView: View {
                     }
                 }
             }
-            Button("ยกเลิก", role: .cancel) { }
+            Button("Cancel", role: .cancel) { }
         } message: {
             if let tab = tabToRename, tab.fileURL != nil {
-                Text("การเปลี่ยนชื่อจะแก้ไขชื่อไฟล์จริงบนเครื่องด้วย")
+                Text("Renaming will change the physical file on disk.")
             } else {
-                Text("ระบุชื่อใหม่สำหรับแท็บนี้")
+                Text("Specify a new name for this tab.")
             }
         }
-        .alert("ไม่สามารถเปลี่ยนชื่อไฟล์ได้", isPresented: $isShowingErrorAlert) {
-            Button("ตกลง", role: .cancel) { }
+        .alert("Failed to Rename File", isPresented: $isShowingErrorAlert) {
+            Button("OK", role: .cancel) { }
         } message: {
-            Text(renameErrorMessage ?? "เกิดข้อผิดพลาดในการเปลี่ยนชื่อไฟล์")
+            Text(renameErrorMessage ?? "An error occurred while renaming the file.")
         }
     }
 }
@@ -186,14 +183,14 @@ public struct TabItemView: View {
         }
         .contextMenu {
             Button(action: onRename) {
-                Label("เปลี่ยนชื่อไฟล์...", systemImage: "pencil")
+                Label("Rename File...", systemImage: "pencil")
             }
             Button(action: onDuplicate) {
-                Label("ทำซ้ำแท็บ", systemImage: "doc.on.doc")
+                Label("Duplicate Tab", systemImage: "doc.on.doc")
             }
             Divider()
             Button(action: onClose) {
-                Label("ปิดแท็บ", systemImage: "xmark")
+                Label("Close Tab", systemImage: "xmark")
             }
         }
         .onHover { hovering in
@@ -201,4 +198,3 @@ public struct TabItemView: View {
         }
     }
 }
-
