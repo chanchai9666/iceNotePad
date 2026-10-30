@@ -145,4 +145,51 @@ final class TabManagerTests: XCTestCase {
 
         XCTAssertThrowsError(try manager.renameTab(id: tab.id, newName: "file2.txt"))
     }
+
+    func testDefaultStorageURLSafety() {
+        let url = TabManager.defaultStorageURL
+        XCTAssertFalse(url.path.isEmpty)
+        XCTAssertTrue(url.path.contains("session.json"))
+    }
+
+    func testOpenDocumentReplacesEmptyTab() {
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        manager.ensureAtLeastOneTab()
+        XCTAssertEqual(manager.tabs.count, 1)
+
+        let testFile = tempDirectory.appendingPathComponent("sample.txt")
+        manager.openDocument(url: testFile, content: "File content", encodingName: "UTF-8")
+
+        XCTAssertEqual(manager.tabs.count, 1)
+        XCTAssertEqual(manager.activeTab?.title, "sample.txt")
+        XCTAssertEqual(manager.activeTab?.content, "File content")
+        XCTAssertEqual(manager.activeTab?.fileURL, testFile)
+        XCTAssertEqual(manager.activeTab?.encodingName, "UTF-8")
+        XCTAssertFalse(manager.activeTab?.isModified ?? true)
+    }
+
+    func testOpenDocumentCreatesNewTabWhenActiveHasContent() {
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        _ = manager.newTab(title: "Draft", content: "Existing content")
+
+        let testFile = tempDirectory.appendingPathComponent("another.txt")
+        manager.openDocument(url: testFile, content: "New file content", encodingName: "Western (ISO Latin 1)")
+
+        XCTAssertEqual(manager.tabs.count, 2)
+        XCTAssertEqual(manager.activeTab?.title, "another.txt")
+        XCTAssertEqual(manager.activeTab?.content, "New file content")
+        XCTAssertEqual(manager.activeTab?.encodingName, "Western (ISO Latin 1)")
+    }
+
+    func testCursorPositionEncapsulation() {
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tab = manager.newTab(title: "Cursor Test", content: "Line 1\nLine 2")
+
+        manager.updateCursor(for: tab.id, position: TextPosition(line: 2, column: 5))
+
+        let updated = manager.tabs.first(where: { $0.id == tab.id })
+        XCTAssertEqual(updated?.cursorPosition, TextPosition(line: 2, column: 5))
+        XCTAssertEqual(updated?.cursorLine, 2)
+        XCTAssertEqual(updated?.cursorColumn, 5)
+    }
 }

@@ -11,7 +11,8 @@ public class TabManager: ObservableObject {
     private var saveCancellable: AnyCancellable?
 
     nonisolated public static var defaultStorageURL: URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
         let dir = appSupport.appendingPathComponent("iceNotePad", isDirectory: true)
         return dir.appendingPathComponent("session.json")
     }
@@ -52,7 +53,7 @@ public class TabManager: ObservableObject {
     }
 
     @discardableResult
-    public func newTab(title: String? = nil, content: String = "", fileURL: URL? = nil) -> NoteTab {
+    public func newTab(title: String? = nil, content: String = "", fileURL: URL? = nil, encodingName: String = "UTF-8") -> NoteTab {
         let tabTitle: String
         if let title = title {
             tabTitle = title
@@ -66,13 +67,27 @@ public class TabManager: ObservableObject {
             title: tabTitle,
             content: content,
             fileURL: fileURL,
-            isModified: false
+            isModified: false,
+            encodingName: encodingName
         )
 
         tabs.append(newTab)
         activeTabId = newTab.id
         saveSession()
         return newTab
+    }
+
+    public func openDocument(url: URL, content: String, encodingName: String = "UTF-8") {
+        if let active = activeTab, active.content.isEmpty, active.fileURL == nil {
+            updateContent(for: active.id, newContent: content)
+            markSaved(id: active.id, fileURL: url)
+            if let idx = tabs.firstIndex(where: { $0.id == active.id }) {
+                tabs[idx].encodingName = encodingName
+            }
+        } else {
+            let tab = newTab(title: url.lastPathComponent, content: content, fileURL: url, encodingName: encodingName)
+            markSaved(id: tab.id, fileURL: url)
+        }
     }
 
     public func closeTab(id: UUID) {
@@ -132,10 +147,13 @@ public class TabManager: ObservableObject {
         }
     }
 
-    public func updateCursor(for id: UUID, line: Int, column: Int) {
+    public func updateCursor(for id: UUID, position: TextPosition) {
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
-        tabs[index].cursorLine = line
-        tabs[index].cursorColumn = column
+        tabs[index].cursorPosition = position
+    }
+
+    public func updateCursor(for id: UUID, line: Int, column: Int) {
+        updateCursor(for: id, position: TextPosition(line: line, column: column))
     }
 
     public func markSaved(id: UUID, fileURL: URL) {
