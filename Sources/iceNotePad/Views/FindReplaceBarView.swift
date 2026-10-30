@@ -3,6 +3,7 @@ import SwiftUI
 public struct FindReplaceBarView: View {
     @Binding public var isPresented: Bool
     @Binding public var text: String
+    @Binding public var targetRange: NSRange?
 
     @State private var searchText: String = ""
     @State private var replaceText: String = ""
@@ -11,9 +12,14 @@ public struct FindReplaceBarView: View {
     @State private var matchCount: Int = 0
     @State private var currentMatchIndex: Int = 0
 
-    public init(isPresented: Binding<Bool>, text: Binding<String>) {
+    public init(
+        isPresented: Binding<Bool>,
+        text: Binding<String>,
+        targetRange: Binding<NSRange?> = .constant(nil)
+    ) {
         self._isPresented = isPresented
         self._text = text
+        self._targetRange = targetRange
     }
 
     private func findMatches() -> [Range<String.Index>] {
@@ -31,14 +37,41 @@ public struct FindReplaceBarView: View {
         return ranges
     }
 
+    private func highlightCurrentMatch(matches: [Range<String.Index>]) {
+        guard !matches.isEmpty, currentMatchIndex < matches.count else {
+            targetRange = nil
+            return
+        }
+        let range = matches[currentMatchIndex]
+        targetRange = NSRange(range, in: text)
+    }
+
     private func updateMatchCount() {
         let matches = findMatches()
         matchCount = matches.count
         if matchCount == 0 {
             currentMatchIndex = 0
-        } else if currentMatchIndex >= matchCount {
-            currentMatchIndex = 0
+            targetRange = nil
+        } else {
+            if currentMatchIndex >= matchCount {
+                currentMatchIndex = 0
+            }
+            highlightCurrentMatch(matches: matches)
         }
+    }
+
+    private func selectNextMatch() {
+        let matches = findMatches()
+        guard !matches.isEmpty else { return }
+        currentMatchIndex = (currentMatchIndex + 1) % matches.count
+        highlightCurrentMatch(matches: matches)
+    }
+
+    private func selectPreviousMatch() {
+        let matches = findMatches()
+        guard !matches.isEmpty else { return }
+        currentMatchIndex = (currentMatchIndex - 1 + matches.count) % matches.count
+        highlightCurrentMatch(matches: matches)
     }
 
     private func replaceCurrent() {
@@ -99,11 +132,31 @@ public struct FindReplaceBarView: View {
 
                 // Match count indicator
                 if !searchText.isEmpty {
-                    Text(matchCount > 0 ? "\(matchCount) matches" : "No matches")
+                    Text(matchCount > 0 ? "\(currentMatchIndex + 1) of \(matchCount)" : "No matches")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .frame(minWidth: 70, alignment: .leading)
                 }
+
+                // Previous Match Button
+                Button(action: selectPreviousMatch) {
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(width: 18, height: 18)
+                }
+                .buttonStyle(.borderless)
+                .disabled(matchCount == 0)
+                .help("Previous Match (Cmd+Shift+G)")
+
+                // Next Match Button
+                Button(action: selectNextMatch) {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .medium))
+                        .frame(width: 18, height: 18)
+                }
+                .buttonStyle(.borderless)
+                .disabled(matchCount == 0)
+                .help("Next Match (Cmd+G)")
 
                 // Match Case Toggle
                 Toggle(isOn: $matchCase) {
@@ -121,6 +174,7 @@ public struct FindReplaceBarView: View {
                 // Close Button
                 Button(action: {
                     isPresented = false
+                    targetRange = nil
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 10, weight: .semibold))
@@ -183,4 +237,3 @@ public struct FindReplaceBarView: View {
         )
     }
 }
-

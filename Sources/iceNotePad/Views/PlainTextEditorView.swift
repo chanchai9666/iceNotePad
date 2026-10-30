@@ -50,6 +50,7 @@ public class PlainTextView: NSTextView {
 
 public struct PlainTextEditorView: NSViewRepresentable {
     @Binding public var text: String
+    @Binding public var searchTargetRange: NSRange?
     public var fontSize: Double
     public var isMonospace: Bool
     public var wordWrap: Bool
@@ -57,12 +58,14 @@ public struct PlainTextEditorView: NSViewRepresentable {
 
     public init(
         text: Binding<String>,
+        searchTargetRange: Binding<NSRange?> = .constant(nil),
         fontSize: Double = 14.0,
         isMonospace: Bool = true,
         wordWrap: Bool = true,
         onCursorChange: ((Int, Int) -> Void)? = nil
     ) {
         self._text = text
+        self._searchTargetRange = searchTargetRange
         self.fontSize = fontSize
         self.isMonospace = isMonospace
         self.wordWrap = wordWrap
@@ -160,11 +163,26 @@ public struct PlainTextEditorView: NSViewRepresentable {
                 textView.setSelectedRange(selectedRange)
             }
         }
+
+        // Scroll to and highlight search target range if requested
+        if let target = searchTargetRange, target != context.coordinator.lastTargetRange {
+            context.coordinator.lastTargetRange = target
+            let strLength = (textView.string as NSString).length
+            if target.location + target.length <= strLength {
+                textView.scrollRangeToVisible(target)
+                textView.showFindIndicator(for: target)
+                textView.setSelectedRange(target)
+                textView.calculateCursorPosition()
+            }
+        } else if searchTargetRange == nil {
+            context.coordinator.lastTargetRange = nil
+        }
     }
 
     public class Coordinator: NSObject, NSTextViewDelegate {
         var parent: PlainTextEditorView
         weak var textView: PlainTextView?
+        var lastTargetRange: NSRange?
 
         init(_ parent: PlainTextEditorView) {
             self.parent = parent
@@ -184,4 +202,3 @@ public struct PlainTextEditorView: NSViewRepresentable {
         }
     }
 }
-

@@ -6,6 +6,7 @@ public struct MainWindowView: View {
     @ObservedObject public var settings: AppSettings
 
     @State private var isFindPresented: Bool = false
+    @State private var searchTargetRange: NSRange? = nil
 
     public init(tabManager: TabManager, settings: AppSettings? = nil) {
         self.tabManager = tabManager
@@ -42,13 +43,14 @@ public struct MainWindowView: View {
 
             // Find and Replace Bar (when Cmd+F is pressed)
             if isFindPresented, let tabBinding = activeTabBinding {
-                FindReplaceBarView(isPresented: $isFindPresented, text: tabBinding.content)
+                FindReplaceBarView(isPresented: $isFindPresented, text: tabBinding.content, targetRange: $searchTargetRange)
             }
 
             // Text Editor Area
             if let tabBinding = activeTabBinding, let activeId = tabManager.activeTabId {
                 PlainTextEditorView(
                     text: tabBinding.content,
+                    searchTargetRange: $searchTargetRange,
                     fontSize: settings.fontSize,
                     isMonospace: settings.isMonospace,
                     wordWrap: settings.wordWrap,
