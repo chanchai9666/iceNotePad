@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct TabBarView: View {
     @ObservedObject public var tabManager: TabManager
+    public let onDoubleClickEmptyArea: (() -> Void)?
 
     @State private var tabToRename: NoteTab?
     @State private var renameInput: String = ""
@@ -9,8 +10,17 @@ public struct TabBarView: View {
     @State private var renameErrorMessage: String?
     @State private var isShowingErrorAlert: Bool = false
 
-    public init(tabManager: TabManager) {
+    public init(tabManager: TabManager, onDoubleClickEmptyArea: (() -> Void)? = nil) {
         self.tabManager = tabManager
+        self.onDoubleClickEmptyArea = onDoubleClickEmptyArea
+    }
+
+    public func handleEmptyAreaDoubleClick() {
+        if let onDoubleClickEmptyArea = onDoubleClickEmptyArea {
+            onDoubleClickEmptyArea()
+        } else {
+            tabManager.newTab()
+        }
     }
 
     public var body: some View {
@@ -41,6 +51,10 @@ public struct TabBarView: View {
                 .padding(.horizontal, 4)
                 .padding(.vertical, 4)
             }
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                handleEmptyAreaDoubleClick()
+            }
 
             // '+' New Tab button
             Button(action: {
@@ -55,7 +69,12 @@ public struct TabBarView: View {
             .padding(.trailing, 8)
             .help("New Tab (Cmd+T)")
 
-            Spacer(minLength: 0)
+            Color.clear
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture(count: 2) {
+                    handleEmptyAreaDoubleClick()
+                }
         }
         .frame(height: 34)
         .background(Color(NSColor.windowBackgroundColor))
@@ -159,6 +178,9 @@ public struct TabItemView: View {
                 .stroke(isActive ? Color(NSColor.separatorColor).opacity(0.5) : Color.clear, lineWidth: 1)
         )
         .contentShape(Rectangle())
+        .onTapGesture(count: 2) {
+            // Consume double-click on tab so it does not trigger newTab()
+        }
         .onTapGesture {
             onSelect()
         }

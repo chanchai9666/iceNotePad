@@ -31,8 +31,8 @@ public class TabManager: ObservableObject {
 
         if autoLoad {
             loadSession()
+            ensureAtLeastOneTab()
         }
-        ensureAtLeastOneTab()
 
         // Debounce auto-save whenever tabs or activeTabId changes
         saveCancellable = $tabs

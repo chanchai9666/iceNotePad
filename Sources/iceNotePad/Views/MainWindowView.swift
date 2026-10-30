@@ -14,10 +14,25 @@ public struct MainWindowView: View {
 
     private var activeTabBinding: Binding<NoteTab>? {
         guard let activeId = tabManager.activeTabId,
-              let index = tabManager.tabs.firstIndex(where: { $0.id == activeId }) else {
+              tabManager.tabs.contains(where: { $0.id == activeId }) else {
             return nil
         }
-        return $tabManager.tabs[index]
+        return Binding(
+            get: {
+                tabManager.tabs.first(where: { $0.id == activeId }) ?? NoteTab(id: activeId, title: "", content: "")
+            },
+            set: { updatedTab in
+                if let index = tabManager.tabs.firstIndex(where: { $0.id == activeId }) {
+                    if tabManager.tabs[index].content != updatedTab.content {
+                        var modified = updatedTab
+                        modified.isModified = true
+                        tabManager.tabs[index] = modified
+                    } else {
+                        tabManager.tabs[index] = updatedTab
+                    }
+                }
+            }
+        )
     }
 
     public var body: some View {
@@ -31,19 +46,22 @@ public struct MainWindowView: View {
             }
 
             // Text Editor Area
-            if let tabBinding = activeTabBinding {
+            if let tabBinding = activeTabBinding, let activeId = tabManager.activeTabId {
                 PlainTextEditorView(
                     text: tabBinding.content,
                     fontSize: settings.fontSize,
                     isMonospace: settings.isMonospace,
                     wordWrap: settings.wordWrap,
                     onCursorChange: { line, col in
-                        tabManager.updateCursor(for: tabBinding.wrappedValue.id, line: line, column: col)
+                        tabManager.updateCursor(for: activeId, line: line, column: col)
                     }
                 )
+                .id(activeId)
                 .background(Color(NSColor.textBackgroundColor))
                 .onChange(of: tabBinding.wrappedValue.content) { _ in
-                    tabBinding.wrappedValue.isModified = true
+                    if let index = tabManager.tabs.firstIndex(where: { $0.id == activeId }) {
+                        tabManager.tabs[index].isModified = true
+                    }
                 }
             } else {
                 VStack {
