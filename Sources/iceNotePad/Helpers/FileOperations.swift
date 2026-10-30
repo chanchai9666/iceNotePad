@@ -3,7 +3,29 @@ import UniformTypeIdentifiers
 
 @MainActor
 public class FileOperations {
-    public static func openFile(completion: @escaping (URL, String) -> Void) {
+    public static func showErrorAlert(title: String, message: String, style: NSAlert.Style = .warning) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.alertStyle = style
+        alert.runModal()
+    }
+
+    public static func readFileContent(from url: URL) throws -> (content: String, encodingName: String) {
+        if let utf8Content = try? String(contentsOf: url, encoding: .utf8) {
+            return (utf8Content, "UTF-8")
+        }
+        if let latin1Content = try? String(contentsOf: url, encoding: .isoLatin1) {
+            return (latin1Content, "Western (ISO Latin 1)")
+        }
+        throw NSError(
+            domain: "iceNotePad.FileOperations",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Unsupported text encoding or corrupted file."]
+        )
+    }
+
+    public static func openFile(completion: @escaping (URL, String, String) -> Void) {
         let openPanel = NSOpenPanel()
         openPanel.title = "Open Document"
         openPanel.showsResizeIndicator = true
@@ -15,20 +37,17 @@ public class FileOperations {
 
         if openPanel.runModal() == .OK, let url = openPanel.url {
             do {
-                let content = try String(contentsOf: url, encoding: .utf8)
-                completion(url, content)
+                let result = try readFileContent(from: url)
+                completion(url, result.content, result.encodingName)
             } catch {
-                // Fallback to ASCII/latin1 if UTF-8 fails
-                if let content = try? String(contentsOf: url, encoding: .isoLatin1) {
-                    completion(url, content)
-                } else {
-                    let alert = NSAlert()
-                    alert.messageText = "Failed to open file"
-                    alert.informativeText = error.localizedDescription
-                    alert.alertStyle = .warning
-                    alert.runModal()
-                }
+                showErrorAlert(title: "Failed to open file", message: error.localizedDescription, style: .warning)
             }
+        }
+    }
+
+    public static func openFile(completion: @escaping (URL, String) -> Void) {
+        openFile { url, content, _ in
+            completion(url, content)
         }
     }
 
@@ -38,11 +57,7 @@ public class FileOperations {
                 try tab.content.write(to: fileURL, atomically: true, encoding: .utf8)
                 completion(fileURL)
             } catch {
-                let alert = NSAlert()
-                alert.messageText = "Failed to save file"
-                alert.informativeText = error.localizedDescription
-                alert.alertStyle = .critical
-                alert.runModal()
+                showErrorAlert(title: "Failed to save file", message: error.localizedDescription, style: .critical)
             }
             return
         }
@@ -65,13 +80,8 @@ public class FileOperations {
                 try tab.content.write(to: url, atomically: true, encoding: .utf8)
                 completion(url)
             } catch {
-                let alert = NSAlert()
-                alert.messageText = "Failed to save file"
-                alert.informativeText = error.localizedDescription
-                alert.alertStyle = .critical
-                alert.runModal()
+                showErrorAlert(title: "Failed to save file", message: error.localizedDescription, style: .critical)
             }
         }
     }
 }
-
