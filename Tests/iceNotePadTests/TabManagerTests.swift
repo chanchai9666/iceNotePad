@@ -89,4 +89,60 @@ final class TabManagerTests: XCTestCase {
         manager.selectTab(index: 1)
         XCTAssertEqual(manager.activeTabId, tab2.id)
     }
+
+    func testDuplicateTab() {
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tab = manager.newTab(title: "MyDoc.txt", content: "Content of original tab")
+        let dummyFileURL = tempDirectory.appendingPathComponent("MyDoc.txt")
+        manager.markSaved(id: tab.id, fileURL: dummyFileURL)
+
+        let duplicate = manager.duplicateTab(id: tab.id)
+        XCTAssertNotNil(duplicate)
+        XCTAssertEqual(duplicate?.title, "MyDoc.txt (Copy)")
+        XCTAssertEqual(duplicate?.content, "Content of original tab")
+        XCTAssertNil(duplicate?.fileURL)
+        XCTAssertTrue(duplicate?.isModified == true)
+        XCTAssertEqual(manager.activeTabId, duplicate?.id)
+    }
+
+    func testRenameTabWithoutPhysicalFile() throws {
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tab = manager.newTab(title: "Draft")
+        try manager.renameTab(id: tab.id, newName: "RenamedDraft")
+
+        let updated = manager.tabs.first(where: { $0.id == tab.id })
+        XCTAssertEqual(updated?.title, "RenamedDraft")
+        XCTAssertNil(updated?.fileURL)
+    }
+
+    func testRenameTabWithPhysicalFile() throws {
+        let originalURL = tempDirectory.appendingPathComponent("original.txt")
+        try "Test file content".write(to: originalURL, atomically: true, encoding: .utf8)
+
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tab = manager.newTab(title: "original.txt", content: "Test file content", fileURL: originalURL)
+
+        let newFileName = "renamed.txt"
+        let expectedNewURL = tempDirectory.appendingPathComponent(newFileName)
+
+        try manager.renameTab(id: tab.id, newName: newFileName)
+
+        let updated = manager.tabs.first(where: { $0.id == tab.id })
+        XCTAssertEqual(updated?.title, newFileName)
+        XCTAssertEqual(updated?.fileURL, expectedNewURL)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: originalURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: expectedNewURL.path))
+    }
+
+    func testRenameTabThrowsIfFileAlreadyExists() throws {
+        let file1 = tempDirectory.appendingPathComponent("file1.txt")
+        let file2 = tempDirectory.appendingPathComponent("file2.txt")
+        try "Content 1".write(to: file1, atomically: true, encoding: .utf8)
+        try "Content 2".write(to: file2, atomically: true, encoding: .utf8)
+
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tab = manager.newTab(title: "file1.txt", content: "Content 1", fileURL: file1)
+
+        XCTAssertThrowsError(try manager.renameTab(id: tab.id, newName: "file2.txt"))
+    }
 }

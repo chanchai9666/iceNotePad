@@ -146,6 +146,46 @@ public class TabManager: ObservableObject {
         saveSession()
     }
 
+    @discardableResult
+    public func duplicateTab(id: UUID) -> NoteTab? {
+        guard let index = tabs.firstIndex(where: { $0.id == id }) else { return nil }
+        let original = tabs[index]
+
+        let newTitle = "\(original.title) (Copy)"
+        let duplicated = NoteTab(
+            id: UUID(),
+            title: newTitle,
+            content: original.content,
+            fileURL: nil,
+            isModified: true,
+            cursorLine: original.cursorLine,
+            cursorColumn: original.cursorColumn
+        )
+
+        tabs.insert(duplicated, at: index + 1)
+        activeTabId = duplicated.id
+        saveSession()
+        return duplicated
+    }
+
+    public func renameTab(id: UUID, newName: String) throws {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
+
+        if let currentURL = tabs[index].fileURL {
+            let directory = currentURL.deletingLastPathComponent()
+            let newURL = directory.appendingPathComponent(trimmed)
+            if newURL != currentURL {
+                try FileManager.default.moveItem(at: currentURL, to: newURL)
+                tabs[index].fileURL = newURL
+            }
+        }
+
+        tabs[index].title = trimmed
+        saveSession()
+    }
+
     public func saveSession() {
         Task {
             saveSessionSync()

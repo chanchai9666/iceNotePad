@@ -3,6 +3,12 @@ import SwiftUI
 public struct TabBarView: View {
     @ObservedObject public var tabManager: TabManager
 
+    @State private var tabToRename: NoteTab?
+    @State private var renameInput: String = ""
+    @State private var isShowingRenameAlert: Bool = false
+    @State private var renameErrorMessage: String?
+    @State private var isShowingErrorAlert: Bool = false
+
     public init(tabManager: TabManager) {
         self.tabManager = tabManager
     }
@@ -20,6 +26,14 @@ public struct TabBarView: View {
                             },
                             onClose: {
                                 tabManager.closeTab(id: tab.id)
+                            },
+                            onDuplicate: {
+                                tabManager.duplicateTab(id: tab.id)
+                            },
+                            onRename: {
+                                tabToRename = tab
+                                renameInput = tab.title
+                                isShowingRenameAlert = true
                             }
                         )
                     }
@@ -51,6 +65,31 @@ public struct TabBarView: View {
                 .foregroundColor(Color(NSColor.separatorColor)),
             alignment: .bottom
         )
+        .alert("เปลี่ยนชื่อไฟล์", isPresented: $isShowingRenameAlert) {
+            TextField("ชื่อไฟล์ใหม่", text: $renameInput)
+            Button("เปลี่ยนชื่อ") {
+                if let tab = tabToRename {
+                    do {
+                        try tabManager.renameTab(id: tab.id, newName: renameInput)
+                    } catch {
+                        renameErrorMessage = error.localizedDescription
+                        isShowingErrorAlert = true
+                    }
+                }
+            }
+            Button("ยกเลิก", role: .cancel) { }
+        } message: {
+            if let tab = tabToRename, tab.fileURL != nil {
+                Text("การเปลี่ยนชื่อจะแก้ไขชื่อไฟล์จริงบนเครื่องด้วย")
+            } else {
+                Text("ระบุชื่อใหม่สำหรับแท็บนี้")
+            }
+        }
+        .alert("ไม่สามารถเปลี่ยนชื่อไฟล์ได้", isPresented: $isShowingErrorAlert) {
+            Button("ตกลง", role: .cancel) { }
+        } message: {
+            Text(renameErrorMessage ?? "เกิดข้อผิดพลาดในการเปลี่ยนชื่อไฟล์")
+        }
     }
 }
 
@@ -59,8 +98,26 @@ public struct TabItemView: View {
     public let isActive: Bool
     public let onSelect: () -> Void
     public let onClose: () -> Void
+    public let onDuplicate: () -> Void
+    public let onRename: () -> Void
 
     @State private var isHovering = false
+
+    public init(
+        tab: NoteTab,
+        isActive: Bool,
+        onSelect: @escaping () -> Void,
+        onClose: @escaping () -> Void,
+        onDuplicate: @escaping () -> Void,
+        onRename: @escaping () -> Void
+    ) {
+        self.tab = tab
+        self.isActive = isActive
+        self.onSelect = onSelect
+        self.onClose = onClose
+        self.onDuplicate = onDuplicate
+        self.onRename = onRename
+    }
 
     public var body: some View {
         HStack(spacing: 6) {
@@ -104,6 +161,18 @@ public struct TabItemView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             onSelect()
+        }
+        .contextMenu {
+            Button(action: onRename) {
+                Label("เปลี่ยนชื่อไฟล์...", systemImage: "pencil")
+            }
+            Button(action: onDuplicate) {
+                Label("ทำซ้ำแท็บ", systemImage: "doc.on.doc")
+            }
+            Divider()
+            Button(action: onClose) {
+                Label("ปิดแท็บ", systemImage: "xmark")
+            }
         }
         .onHover { hovering in
             isHovering = hovering
