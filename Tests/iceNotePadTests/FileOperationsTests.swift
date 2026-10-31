@@ -38,3 +38,4 @@ final class FileOperationsTests: XCTestCase {
         XCTAssertEqual(result.encodingName, "Western (ISO Latin 1)")
     }
 }
+
