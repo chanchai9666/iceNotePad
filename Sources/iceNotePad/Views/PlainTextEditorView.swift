@@ -159,7 +159,8 @@ public struct PlainTextEditorView: NSViewRepresentable {
         if textView.string != text {
             let selectedRange = textView.selectedRange()
             textView.string = text
-            if selectedRange.location <= (text as NSString).length {
+            let strLength = (text as NSString).length
+            if selectedRange.location + selectedRange.length <= strLength {
                 textView.setSelectedRange(selectedRange)
             }
         }

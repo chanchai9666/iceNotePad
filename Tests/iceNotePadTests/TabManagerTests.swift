@@ -192,4 +192,40 @@ final class TabManagerTests: XCTestCase {
         XCTAssertEqual(updated?.cursorLine, 2)
         XCTAssertEqual(updated?.cursorColumn, 5)
     }
+
+    func testLegacySessionBackwardCompatibility() throws {
+        let legacyJSON = """
+        {
+          "tabs": [
+            {
+              "id": "E621E1F8-C36C-495A-93FC-0C247A3E6E5F",
+              "title": "Legacy Tab",
+              "content": "Legacy saved content",
+              "cursorLine": 4,
+              "cursorColumn": 12,
+              "isModified": false
+            }
+          ],
+          "activeTabId": "E621E1F8-C36C-495A-93FC-0C247A3E6E5F",
+          "untitledCounter": 2
+        }
+        """
+        try legacyJSON.write(to: sessionFileURL, atomically: true, encoding: .utf8)
+
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: true)
+        XCTAssertEqual(manager.tabs.count, 1)
+        XCTAssertEqual(manager.tabs.first?.title, "Legacy Tab")
+        XCTAssertEqual(manager.tabs.first?.content, "Legacy saved content")
+        XCTAssertEqual(manager.tabs.first?.cursorPosition, TextPosition(line: 4, column: 12))
+        XCTAssertEqual(manager.tabs.first?.encodingName, "UTF-8")
+    }
+
+    func testDuplicateTabPreservesEncoding() {
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tab = manager.newTab(title: "ISO Doc", content: "Some content", encodingName: "Western (ISO Latin 1)")
+
+        let dup = manager.duplicateTab(id: tab.id)
+        XCTAssertNotNil(dup)
+        XCTAssertEqual(dup?.encodingName, "Western (ISO Latin 1)")
+    }
 }

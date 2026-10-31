@@ -29,6 +29,11 @@ public struct NoteTab: Identifiable, Codable, Equatable {
         set { cursorPosition.column = newValue }
     }
 
+    enum CodingKeys: String, CodingKey {
+        case id, title, content, fileURL, isModified, cursorPosition, encodingName
+        case cursorLine, cursorColumn
+    }
+
     public init(
         id: UUID = UUID(),
         title: String = "Untitled",
@@ -66,6 +71,36 @@ public struct NoteTab: Identifiable, Codable, Equatable {
             cursorPosition: TextPosition(line: cursorLine, column: cursorColumn),
             encodingName: encodingName
         )
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.id = try container.decode(UUID.self, forKey: .id)
+        self.title = try container.decode(String.self, forKey: .title)
+        self.content = try container.decode(String.self, forKey: .content)
+        self.fileURL = try container.decodeIfPresent(URL.self, forKey: .fileURL)
+        self.isModified = try container.decode(Bool.self, forKey: .isModified)
+
+        if let position = try container.decodeIfPresent(TextPosition.self, forKey: .cursorPosition) {
+            self.cursorPosition = position
+        } else {
+            let line = try container.decodeIfPresent(Int.self, forKey: .cursorLine) ?? 1
+            let col = try container.decodeIfPresent(Int.self, forKey: .cursorColumn) ?? 1
+            self.cursorPosition = TextPosition(line: line, column: col)
+        }
+
+        self.encodingName = try container.decodeIfPresent(String.self, forKey: .encodingName) ?? "UTF-8"
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(content, forKey: .content)
+        try container.encodeIfPresent(fileURL, forKey: .fileURL)
+        try container.encode(isModified, forKey: .isModified)
+        try container.encode(cursorPosition, forKey: .cursorPosition)
+        try container.encode(encodingName, forKey: .encodingName)
     }
 
     public static func == (lhs: NoteTab, rhs: NoteTab) -> Bool {

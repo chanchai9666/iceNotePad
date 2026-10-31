@@ -44,6 +44,7 @@ public struct MainWindowView: View {
             // Find and Replace Bar (when Cmd+F is pressed)
             if isFindPresented, let tabBinding = activeTabBinding {
                 FindReplaceBarView(isPresented: $isFindPresented, text: tabBinding.content, targetRange: $searchTargetRange)
+                    .id(tabBinding.wrappedValue.id)
             }
 
             // Text Editor Area
@@ -90,6 +91,9 @@ public struct MainWindowView: View {
             }
         }
         .frame(minWidth: 500, minHeight: 350)
+        .onChange(of: tabManager.activeTabId) { _ in
+            searchTargetRange = nil
+        }
         // Keyboard Shortcuts
         .background(
             ZStack {

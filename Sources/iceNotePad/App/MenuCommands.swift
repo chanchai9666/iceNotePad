@@ -34,6 +34,9 @@ public struct IceNotePadCommands: Commands {
                 if let active = tabManager.activeTab {
                     FileOperations.saveFile(tab: active, forceSaveAs: false) { savedURL in
                         tabManager.markSaved(id: active.id, fileURL: savedURL)
+                        if let idx = tabManager.tabs.firstIndex(where: { $0.id == active.id }) {
+                            tabManager.tabs[idx].encodingName = "UTF-8"
+                        }
                     }
                 }
             }
@@ -43,6 +46,9 @@ public struct IceNotePadCommands: Commands {
                 if let active = tabManager.activeTab {
                     FileOperations.saveFile(tab: active, forceSaveAs: true) { savedURL in
                         tabManager.markSaved(id: active.id, fileURL: savedURL)
+                        if let idx = tabManager.tabs.firstIndex(where: { $0.id == active.id }) {
+                            tabManager.tabs[idx].encodingName = "UTF-8"
+                        }
                     }
                 }
             }

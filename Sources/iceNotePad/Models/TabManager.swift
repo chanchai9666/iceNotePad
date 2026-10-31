@@ -176,8 +176,8 @@ public class TabManager: ObservableObject {
             content: original.content,
             fileURL: nil,
             isModified: true,
-            cursorLine: original.cursorLine,
-            cursorColumn: original.cursorColumn
+            cursorPosition: original.cursorPosition,
+            encodingName: original.encodingName
         )
 
         tabs.insert(duplicated, at: index + 1)
