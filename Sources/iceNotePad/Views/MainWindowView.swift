@@ -7,6 +7,7 @@ public struct MainWindowView: View {
 
     @State private var isFindPresented: Bool = false
     @State private var searchTargetRange: NSRange? = nil
+    @State private var findFocusTrigger: UUID = UUID()
 
     public init(tabManager: TabManager, settings: AppSettings? = nil) {
         self.tabManager = tabManager
@@ -43,8 +44,13 @@ public struct MainWindowView: View {
 
             // Find and Replace Bar (when Cmd+F is pressed)
             if isFindPresented, let tabBinding = activeTabBinding {
-                FindReplaceBarView(isPresented: $isFindPresented, text: tabBinding.content, targetRange: $searchTargetRange)
-                    .id(tabBinding.wrappedValue.id)
+                FindReplaceBarView(
+                    isPresented: $isFindPresented,
+                    text: tabBinding.content,
+                    targetRange: $searchTargetRange,
+                    focusTrigger: $findFocusTrigger
+                )
+                .id(tabBinding.wrappedValue.id)
             }
 
             // Text Editor Area
@@ -99,7 +105,8 @@ public struct MainWindowView: View {
             ZStack {
                 Button("") {
                     withAnimation {
-                        isFindPresented.toggle()
+                        isFindPresented = true
+                        findFocusTrigger = UUID()
                     }
                 }
                 .keyboardShortcut("f", modifiers: .command)

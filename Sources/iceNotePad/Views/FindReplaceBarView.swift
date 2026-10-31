@@ -4,6 +4,9 @@ public struct FindReplaceBarView: View {
     @Binding public var isPresented: Bool
     @Binding public var text: String
     @Binding public var targetRange: NSRange?
+    @Binding public var focusTrigger: UUID
+
+    @FocusState private var isSearchFieldFocused: Bool
 
     @State private var searchText: String = ""
     @State private var replaceText: String = ""
@@ -15,11 +18,13 @@ public struct FindReplaceBarView: View {
     public init(
         isPresented: Binding<Bool>,
         text: Binding<String>,
-        targetRange: Binding<NSRange?> = .constant(nil)
+        targetRange: Binding<NSRange?> = .constant(nil),
+        focusTrigger: Binding<UUID> = .constant(UUID())
     ) {
         self._isPresented = isPresented
         self._text = text
         self._targetRange = targetRange
+        self._focusTrigger = focusTrigger
     }
 
     private func findMatches() -> [Range<String.Index>] {
@@ -63,8 +68,12 @@ public struct FindReplaceBarView: View {
     private func selectNextMatch() {
         let matches = findMatches()
         guard !matches.isEmpty else { return }
-        currentMatchIndex = (currentMatchIndex + 1) % matches.count
-        highlightCurrentMatch(matches: matches)
+        if targetRange == nil {
+            highlightCurrentMatch(matches: matches)
+        } else {
+            currentMatchIndex = (currentMatchIndex + 1) % matches.count
+            highlightCurrentMatch(matches: matches)
+        }
     }
 
     private func selectPreviousMatch() {
@@ -116,6 +125,11 @@ public struct FindReplaceBarView: View {
                     TextField("Find", text: $searchText)
                         .textFieldStyle(.plain)
                         .font(.system(size: 12))
+                        .focused($isSearchFieldFocused)
+                        .onSubmit {
+                            selectNextMatch()
+                            isSearchFieldFocused = true
+                        }
                         .onChange(of: searchText) { _ in
                             updateMatchCount()
                         }
@@ -235,5 +249,15 @@ public struct FindReplaceBarView: View {
                 .foregroundColor(Color(NSColor.separatorColor)),
             alignment: .bottom
         )
+        .onAppear {
+            DispatchQueue.main.async {
+                isSearchFieldFocused = true
+            }
+        }
+        .onChange(of: focusTrigger) { _ in
+            DispatchQueue.main.async {
+                isSearchFieldFocused = true
+            }
+        }
     }
 }
