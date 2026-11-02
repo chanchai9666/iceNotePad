@@ -36,7 +36,7 @@ public class TabManager: ObservableObject {
         }
 
         // Debounce auto-save whenever tabs or activeTabId changes
-        saveCancellable = $tabs
+        saveCancellable = Publishers.Merge($tabs.map { _ in () }, $activeTabId.map { _ in () })
             .dropFirst()
             .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -115,28 +115,24 @@ public class TabManager: ObservableObject {
     public func selectTab(id: UUID) {
         if tabs.contains(where: { $0.id == id }) {
             activeTabId = id
-            saveSession()
         }
     }
 
     public func selectTab(index: Int) {
         guard index >= 0 && index < tabs.count else { return }
         activeTabId = tabs[index].id
-        saveSession()
     }
 
     public func selectNextTab() {
         guard tabs.count > 1, let currentIdx = activeTabIndex else { return }
         let nextIdx = (currentIdx + 1) % tabs.count
         activeTabId = tabs[nextIdx].id
-        saveSession()
     }
 
     public func selectPreviousTab() {
         guard tabs.count > 1, let currentIdx = activeTabIndex else { return }
         let prevIdx = (currentIdx - 1 + tabs.count) % tabs.count
         activeTabId = tabs[prevIdx].id
-        saveSession()
     }
 
     public func updateContent(for id: UUID, newContent: String) {
@@ -149,7 +145,9 @@ public class TabManager: ObservableObject {
 
     public func updateCursor(for id: UUID, position: TextPosition) {
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
-        tabs[index].cursorPosition = position
+        if tabs[index].cursorPosition != position {
+            tabs[index].cursorPosition = position
+        }
     }
 
     public func updateCursor(for id: UUID, line: Int, column: Int) {
@@ -205,8 +203,17 @@ public class TabManager: ObservableObject {
     }
 
     public func saveSession() {
-        Task {
-            saveSessionSync()
+        let state = SessionState(tabs: tabs, activeTabId: activeTabId, untitledCounter: untitledCounter)
+        let url = storageURL
+        DispatchQueue.global(qos: .utility).async {
+            do {
+                let dir = url.deletingLastPathComponent()
+                guard FileManager.default.fileExists(atPath: dir.path) || (try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)) != nil else { return }
+                let data = try JSONEncoder().encode(state)
+                try data.write(to: url, options: .atomic)
+            } catch {
+                // Silently ignore write failures if directory was cleaned up or unavailable
+            }
         }
     }
 

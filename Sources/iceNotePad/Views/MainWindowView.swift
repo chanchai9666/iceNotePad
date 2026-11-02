@@ -66,12 +66,8 @@ public struct MainWindowView: View {
                     }
                 )
                 .id(activeId)
+                .transition(.opacity)
                 .background(Color(NSColor.textBackgroundColor))
-                .onChange(of: tabBinding.wrappedValue.content) { _ in
-                    if let index = tabManager.tabs.firstIndex(where: { $0.id == activeId }) {
-                        tabManager.tabs[index].isModified = true
-                    }
-                }
             } else {
                 VStack {
                     Spacer()
@@ -97,6 +93,7 @@ public struct MainWindowView: View {
             }
         }
         .frame(minWidth: 500, minHeight: 350)
+        .animation(.easeInOut(duration: 0.12), value: tabManager.activeTabId)
         .onChange(of: tabManager.activeTabId) { _ in
             searchTargetRange = nil
         }

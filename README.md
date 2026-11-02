@@ -69,11 +69,11 @@
    git clone https://github.com/chanchai9666/iceNotePad.git
    cd iceNotePad
    ```
-2. รันสคริปต์คอมไพล์เพื่อสร้าง App Bundle:
+2. คอมไพล์และติดตั้งไปยังโฟลเดอร์ `/Applications`:
    ```bash
-   ./scripts/build_app.sh
+   make install
    ```
-3. แอปจะถูกสร้างไว้ที่ `build/iceNotePad.app` สามารถลากไปใส่โฟลเดอร์ `/Applications` ได้ทันที
+   *(หรือรัน `./scripts/build_app.sh` แล้วลาก `build/iceNotePad.app` ไปยัง `/Applications`)*
 
 ---
 
@@ -93,13 +93,19 @@
 ### สำหรับนักพัฒนา (Developer Commands)
 ```bash
 # คอมไพล์และรัน Automated Tests
-swift test
+make test
+
+# บิลด์ Release Binary และติดตั้งไปยัง /Applications
+make install
 
 # บิลด์ Release Binary และสร้าง iceNotePad.app
-./scripts/build_app.sh
+make app
+
+# รันแอปพลิเคชันทันที
+make run
 
 # แพ็คเกจไฟล์สำหรับ Release (.dmg และ .zip)
-./scripts/package_release.sh
+make package
 ```
 
 ---

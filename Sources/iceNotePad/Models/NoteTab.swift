@@ -1,6 +1,6 @@
 import Foundation
 
-public struct TextPosition: Codable, Equatable {
+public struct TextPosition: Codable, Equatable, Sendable {
     public var line: Int
     public var column: Int
 
@@ -10,7 +10,7 @@ public struct TextPosition: Codable, Equatable {
     }
 }
 
-public struct NoteTab: Identifiable, Codable, Equatable {
+public struct NoteTab: Identifiable, Codable, Equatable, Sendable {
     public var id: UUID
     public var title: String
     public var content: String
@@ -114,7 +114,7 @@ public struct NoteTab: Identifiable, Codable, Equatable {
     }
 }
 
-public struct SessionState: Codable {
+public struct SessionState: Codable, Sendable {
     public var tabs: [NoteTab]
     public var activeTabId: UUID?
     public var untitledCounter: Int
