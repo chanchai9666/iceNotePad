@@ -46,6 +46,28 @@ public class PlainTextView: NSTextView {
         let column = max((lines.last?.utf16.count ?? 0) + 1, 1)
         onCursorChange?(line, column)
     }
+
+    /// Paints a persistent find highlight without touching the text storage,
+    /// so plain-text content and undo history stay untouched.
+    public func setSearchHighlight(_ range: NSRange?) {
+        guard let layoutManager = self.layoutManager else { return }
+
+        let fullRange = NSRange(location: 0, length: (self.string as NSString).length)
+        layoutManager.removeTemporaryAttribute(.backgroundColor, forCharacterRange: fullRange)
+
+        guard let range = range,
+              range.location != NSNotFound,
+              range.length > 0,
+              range.location + range.length <= fullRange.length else {
+            return
+        }
+
+        layoutManager.addTemporaryAttribute(
+            .backgroundColor,
+            value: NSColor.findHighlightColor,
+            forCharacterRange: range
+        )
+    }
 }
 
 public struct PlainTextEditorView: NSViewRepresentable {
@@ -70,6 +92,18 @@ public struct PlainTextEditorView: NSViewRepresentable {
         self.isMonospace = isMonospace
         self.wordWrap = wordWrap
         self.onCursorChange = onCursorChange
+    }
+
+    private func applySearchHighlight(_ range: NSRange?, to textView: PlainTextView) {
+        let length = (textView.string as NSString).length
+        if let range = range,
+           range.location != NSNotFound,
+           range.location + range.length <= length {
+            textView.scrollRangeToVisible(range)
+            textView.setSearchHighlight(range)
+        } else {
+            textView.setSearchHighlight(nil)
+        }
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -156,27 +190,27 @@ public struct PlainTextEditorView: NSViewRepresentable {
         }
 
         // Update text without disrupting cursor position
+        var textDidChange = false
         if textView.string != text {
             let selectedRange = textView.selectedRange()
             textView.string = text
+            textDidChange = true
             let strLength = (text as NSString).length
             if selectedRange.location + selectedRange.length <= strLength {
                 textView.setSelectedRange(selectedRange)
             }
         }
 
-        // Scroll to and highlight search target range if requested
-        if let target = searchTargetRange, target != context.coordinator.lastTargetRange {
+        // Highlight the current search match with a temporary background attribute.
+        // This keeps the colour constant regardless of which control has focus,
+        // instead of mixing the transient find indicator with the selection colour.
+        let target = searchTargetRange
+        if target != context.coordinator.lastTargetRange {
             context.coordinator.lastTargetRange = target
-            let strLength = (textView.string as NSString).length
-            if target.location + target.length <= strLength {
-                textView.scrollRangeToVisible(target)
-                textView.showFindIndicator(for: target)
-                textView.setSelectedRange(target)
-                textView.calculateCursorPosition()
-            }
-        } else if searchTargetRange == nil {
-            context.coordinator.lastTargetRange = nil
+            applySearchHighlight(target, to: textView)
+        } else if textDidChange, let target = target {
+            // Replacing the string clears temporary attributes, so repaint.
+            applySearchHighlight(target, to: textView)
         }
     }
 

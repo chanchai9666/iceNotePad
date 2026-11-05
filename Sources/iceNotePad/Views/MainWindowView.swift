@@ -112,6 +112,7 @@ public struct MainWindowView: View {
                 Button("") {
                     if isFindPresented {
                         withAnimation { isFindPresented = false }
+                        searchTargetRange = nil
                     }
                 }
                 .keyboardShortcut(.escape, modifiers: [])

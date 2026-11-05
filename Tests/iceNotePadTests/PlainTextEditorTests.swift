@@ -61,4 +61,55 @@ final class PlainTextEditorTests: XCTestCase {
         XCTAssertEqual(reportedLine, 2)
         XCTAssertEqual(reportedCol, 8)
     }
+
+    func testSearchHighlightUsesTemporaryAttributesWithoutTouchingTextStorage() throws {
+        let textView = PlainTextView()
+        textView.string = "hello world hello"
+
+        let matchRange = NSRange(location: 12, length: 5)
+        textView.setSearchHighlight(matchRange)
+
+        let layoutManager = try XCTUnwrap(textView.layoutManager)
+
+        var effectiveRange = NSRange()
+        let highlight = layoutManager.temporaryAttribute(
+            .backgroundColor,
+            atCharacterIndex: matchRange.location,
+            effectiveRange: &effectiveRange
+        )
+        XCTAssertNotNil(highlight)
+        XCTAssertEqual(effectiveRange, matchRange)
+
+        // Outside the match must stay unhighlighted.
+        XCTAssertNil(layoutManager.temporaryAttribute(
+            .backgroundColor,
+            atCharacterIndex: 0,
+            effectiveRange: nil
+        ))
+
+        // Plain-text guarantee: text storage keeps no background attribute.
+        let storageAttributes = textView.textStorage?.attributes(at: matchRange.location, effectiveRange: nil) ?? [:]
+        XCTAssertNil(storageAttributes[.backgroundColor])
+
+        textView.setSearchHighlight(nil)
+        XCTAssertNil(layoutManager.temporaryAttribute(
+            .backgroundColor,
+            atCharacterIndex: matchRange.location,
+            effectiveRange: nil
+        ))
+    }
+
+    func testSearchHighlightIgnoresOutOfBoundsRange() throws {
+        let textView = PlainTextView()
+        textView.string = "short"
+
+        textView.setSearchHighlight(NSRange(location: 3, length: 10))
+
+        let layoutManager = try XCTUnwrap(textView.layoutManager)
+        XCTAssertNil(layoutManager.temporaryAttribute(
+            .backgroundColor,
+            atCharacterIndex: 0,
+            effectiveRange: nil
+        ))
+    }
 }
