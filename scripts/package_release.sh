@@ -4,20 +4,24 @@ set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
-echo "==> 1. Building App Bundle..."
+# shellcheck source=scripts/version.sh
+source "$DIR/scripts/version.sh"
+APP_VERSION="$(resolve_app_version)" || exit 1
+
+DMG_PATH="build/iceNotePad-$APP_VERSION.dmg"
+ZIP_PATH="build/iceNotePad-$APP_VERSION.zip"
+
+echo "==> 1. Building App Bundle ($APP_VERSION)..."
 ./scripts/build_app.sh
 
 echo "==> 2. Creating ZIP package..."
-cd build
-rm -f iceNotePad.zip
-zip -r -y iceNotePad.zip iceNotePad.app
+rm -f "$ZIP_PATH"
+( cd build && zip -r -y "iceNotePad-$APP_VERSION.zip" iceNotePad.app )
 
 echo "==> 3. Creating DMG package..."
-cd "$DIR"
-rm -f build/iceNotePad.dmg
-hdiutil create -volname "iceNotePad" -srcfolder build/iceNotePad.app -ov -format UDZO build/iceNotePad.dmg
+rm -f "$DMG_PATH"
+hdiutil create -volname "iceNotePad" -srcfolder build/iceNotePad.app -ov -format UDZO "$DMG_PATH"
 
 echo "==> Done! Release packages created at:"
-echo "    - build/iceNotePad.dmg"
-echo "    - build/iceNotePad.zip"
-
+echo "    - $DMG_PATH"
+echo "    - $ZIP_PATH"

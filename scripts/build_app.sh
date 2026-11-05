@@ -5,17 +5,9 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
 # Single source of truth for the app version.
-VERSION_FILE="$DIR/VERSION"
-if [[ -f "$VERSION_FILE" ]]; then
-    APP_VERSION="${APP_VERSION:-$(tr -d '[:space:]' < "$VERSION_FILE")}"
-else
-    APP_VERSION="${APP_VERSION:-0.0.0}"
-fi
-
-if [[ ! "$APP_VERSION" =~ ^[0-9]+(\.[0-9]+){2}$ ]]; then
-    echo "error: invalid app version '$APP_VERSION' (expected MAJOR.MINOR.PATCH in $VERSION_FILE)" >&2
-    exit 1
-fi
+# shellcheck source=scripts/version.sh
+source "$DIR/scripts/version.sh"
+APP_VERSION="$(resolve_app_version)" || exit 1
 
 echo "==> App version: $APP_VERSION"
 echo "==> Building iceNotePad (Release mode for Apple Silicon arm64)..."

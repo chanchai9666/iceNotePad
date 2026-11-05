@@ -57,7 +57,7 @@
 
 ### วิธีที่ 1: ติดตั้งผ่าน GitHub Release (แนะนำสำหรับผู้ใช้งานทั่วไป)
 1. ไปที่เมนู **[Releases](https://github.com/chanchai9666/iceNotePad/releases)** ทางแถบขวามือของ GitHub
-2. ดาวน์โหลดไฟล์ **`iceNotePad.dmg`** หรือ **`iceNotePad.zip`**
+2. ดาวน์โหลดไฟล์ **`iceNotePad-<version>.dmg`** (เช่น `iceNotePad-1.0.3.dmg`) หรือ **`iceNotePad-<version>.zip`**
 3. ดับเบิ้ลคลิกเปิดไฟล์ แล้วลากไอคอน **`iceNotePad`** ไปใส่ในโฟลเดอร์ **`Applications`** ของเครื่อง Mac
 4. ดับเบิ้ลคลิกเปิดใช้งานโปรแกรมได้ทันที
 
