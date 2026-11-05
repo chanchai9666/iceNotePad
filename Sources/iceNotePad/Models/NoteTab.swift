@@ -119,9 +119,26 @@ public struct SessionState: Codable, Sendable {
     public var activeTabId: UUID?
     public var untitledCounter: Int
 
+    private enum CodingKeys: String, CodingKey {
+        case tabs
+        case activeTabId
+        case untitledCounter
+    }
+
     public init(tabs: [NoteTab], activeTabId: UUID?, untitledCounter: Int) {
         self.tabs = tabs
         self.activeTabId = activeTabId
         self.untitledCounter = untitledCounter
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let tabs = try container.decodeIfPresent([NoteTab].self, forKey: .tabs) ?? []
+        self.tabs = tabs
+        self.activeTabId = try container.decodeIfPresent(UUID.self, forKey: .activeTabId)
+        // Sessions written before untitledCounter existed must still load
+        // instead of failing the whole decode and dropping every tab.
+        self.untitledCounter = try container.decodeIfPresent(Int.self, forKey: .untitledCounter)
+            ?? max(tabs.count + 1, 1)
     }
 }

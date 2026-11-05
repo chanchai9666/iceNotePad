@@ -146,6 +146,59 @@ final class TabManagerTests: XCTestCase {
         XCTAssertThrowsError(try manager.renameTab(id: tab.id, newName: "file2.txt"))
     }
 
+    func testRenameTabRejectsPathTraversal() throws {
+        let originalURL = tempDirectory.appendingPathComponent("original.txt")
+        try "content".write(to: originalURL, atomically: true, encoding: .utf8)
+
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tab = manager.newTab(title: "original.txt", content: "content", fileURL: originalURL)
+
+        let escapedName = "escaped-\(UUID().uuidString).txt"
+        XCTAssertThrowsError(try manager.renameTab(id: tab.id, newName: "../\(escapedName)")) { error in
+            XCTAssertEqual((error as? CocoaError)?.code, .fileWriteInvalidFileName)
+        }
+
+        let escapedURL = tempDirectory.deletingLastPathComponent().appendingPathComponent(escapedName)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: escapedURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: originalURL.path))
+
+        let updated = manager.tabs.first(where: { $0.id == tab.id })
+        XCTAssertEqual(updated?.fileURL, originalURL)
+        XCTAssertEqual(updated?.title, "original.txt")
+    }
+
+    func testRenameTabRejectsNestedPathComponent() throws {
+        let originalURL = tempDirectory.appendingPathComponent("original.txt")
+        try "content".write(to: originalURL, atomically: true, encoding: .utf8)
+
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tab = manager.newTab(title: "original.txt", content: "content", fileURL: originalURL)
+
+        XCTAssertThrowsError(try manager.renameTab(id: tab.id, newName: "sub/original.txt")) { error in
+            XCTAssertEqual((error as? CocoaError)?.code, .fileWriteInvalidFileName)
+        }
+        XCTAssertEqual(manager.tabs.first(where: { $0.id == tab.id })?.fileURL, originalURL)
+    }
+
+    func testLoadSessionSurvivesLegacyFormatWithoutUntitledCounter() throws {
+        let legacyTab: [String: Any] = [
+            "id": UUID().uuidString,
+            "title": "Legacy",
+            "content": "old content",
+            "isModified": false,
+            "encodingName": "UTF-8"
+        ]
+        let legacySession: [String: Any] = ["tabs": [legacyTab]]
+        try JSONSerialization.data(withJSONObject: legacySession).write(to: sessionFileURL)
+
+        let manager = TabManager(storageURL: sessionFileURL, autoLoad: true)
+
+        XCTAssertEqual(manager.tabs.count, 1)
+        XCTAssertEqual(manager.tabs.first?.title, "Legacy")
+        XCTAssertEqual(manager.tabs.first?.content, "old content")
+        XCTAssertEqual(manager.untitledCounter, 2)
+    }
+
     func testDefaultStorageURLSafety() {
         let url = TabManager.defaultStorageURL
         XCTAssertFalse(url.path.isEmpty)

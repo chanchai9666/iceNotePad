@@ -190,6 +190,13 @@ public class TabManager: ObservableObject {
         guard let index = tabs.firstIndex(where: { $0.id == id }) else { return }
 
         if let currentURL = tabs[index].fileURL {
+            // Only a single path component is a valid file name; this blocks
+            // names such as "../escape.txt" or "sub/file.txt" from moving the
+            // file outside its directory.
+            guard Self.isValidFileName(trimmed) else {
+                throw CocoaError(.fileWriteInvalidFileName)
+            }
+
             let directory = currentURL.deletingLastPathComponent()
             let newURL = directory.appendingPathComponent(trimmed)
             if newURL != currentURL {
@@ -200,6 +207,11 @@ public class TabManager: ObservableObject {
 
         tabs[index].title = trimmed
         saveSession()
+    }
+
+    private static func isValidFileName(_ name: String) -> Bool {
+        guard name != ".", name != ".." else { return false }
+        return (name as NSString).lastPathComponent == name
     }
 
     public func saveSession() {
