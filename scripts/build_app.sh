@@ -4,6 +4,20 @@ set -e
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$DIR"
 
+# Single source of truth for the app version.
+VERSION_FILE="$DIR/VERSION"
+if [[ -f "$VERSION_FILE" ]]; then
+    APP_VERSION="${APP_VERSION:-$(tr -d '[:space:]' < "$VERSION_FILE")}"
+else
+    APP_VERSION="${APP_VERSION:-0.0.0}"
+fi
+
+if [[ ! "$APP_VERSION" =~ ^[0-9]+(\.[0-9]+){2}$ ]]; then
+    echo "error: invalid app version '$APP_VERSION' (expected MAJOR.MINOR.PATCH in $VERSION_FILE)" >&2
+    exit 1
+fi
+
+echo "==> App version: $APP_VERSION"
 echo "==> Building iceNotePad (Release mode for Apple Silicon arm64)..."
 swift build -c release
 
@@ -49,9 +63,9 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>__APP_VERSION__</string>
     <key>CFBundleVersion</key>
-    <string>1</string>
+    <string>__APP_VERSION__</string>
     <key>NSHumanReadableCopyright</key>
     <string>Copyright © 2026 chanchai (cjiceko@gmail.com). All rights reserved.</string>
     <key>LSMinimumSystemVersion</key>
@@ -82,6 +96,8 @@ cat << 'EOF' > "$CONTENTS_DIR/Info.plist"
 </dict>
 </plist>
 EOF
+
+sed -i '' "s/__APP_VERSION__/$APP_VERSION/g" "$CONTENTS_DIR/Info.plist"
 
 echo "==> Signing App Bundle..."
 codesign --force --deep --sign - "$APP_DIR"
