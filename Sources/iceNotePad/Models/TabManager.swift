@@ -228,7 +228,7 @@ public class TabManager: ObservableObject {
         }
     }
 
-    private static func write(_ state: SessionState, to url: URL) {
+    nonisolated private static func write(_ state: SessionState, to url: URL) {
         do {
             let dir = url.deletingLastPathComponent()
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)

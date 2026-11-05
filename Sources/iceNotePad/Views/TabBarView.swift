@@ -1,21 +1,32 @@
 import SwiftUI
 
 public struct TabBarWidthPreferenceKey: PreferenceKey {
-    public static var defaultValue: CGFloat = 800
+    public static var defaultValue: CGFloat = 0
     public static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
+        let next = nextValue()
+        if next > 0 {
+            value = next
+        }
     }
 }
 
 public struct TabBarView: View {
     @ObservedObject public var tabManager: TabManager
+    public var explicitAvailableWidth: CGFloat? = nil
 
-    @State private var availableWidth: CGFloat = 800
+    @State private var measuredWidth: CGFloat = 800
     @State private var tabToRename: NoteTab?
     @State private var renameInput: String = ""
     @State private var isShowingRenameAlert: Bool = false
     @State private var renameErrorMessage: String?
     @State private var isShowingErrorAlert: Bool = false
+
+    private var effectiveAvailableWidth: CGFloat {
+        if let explicit = explicitAvailableWidth, explicit > 0 {
+            return explicit
+        }
+        return measuredWidth
+    }
 
     public struct TabMetrics {
         public let isTwoRows: Bool
@@ -27,8 +38,9 @@ public struct TabBarView: View {
         public let row2NeedsScroll: Bool
     }
 
-    public init(tabManager: TabManager) {
+    public init(tabManager: TabManager, availableWidth: CGFloat? = nil) {
         self.tabManager = tabManager
+        self.explicitAvailableWidth = availableWidth
     }
 
     public func handleEmptyAreaDoubleClick() {
@@ -54,13 +66,13 @@ public struct TabBarView: View {
         let minTabWidth: CGFloat = 90
         let maxTabWidth: CGFloat = 180
 
-        let singleRowSpacing = CGFloat(max(0, tabCount - 1)) * spacing
+        let singleRowSpacing = CGFloat(tabCount) * spacing
         let singleRowNeeded = CGFloat(tabCount) * minTabWidth + singleRowSpacing + reservedPlusWidth
         let isTwoRows = tabCount >= 6 && singleRowNeeded > availableWidth
 
         if !isTwoRows {
             let availableForTabs = max(0, availableWidth - reservedPlusWidth - singleRowSpacing)
-            let dynamicWidth = availableForTabs / CGFloat(tabCount)
+            let dynamicWidth = floor(availableForTabs / CGFloat(tabCount))
             let tabWidth = max(minTabWidth, min(maxTabWidth, dynamicWidth))
             let totalNeeded = CGFloat(tabCount) * tabWidth + singleRowSpacing + reservedPlusWidth
             let needsScroll = totalNeeded > availableWidth
@@ -82,15 +94,15 @@ public struct TabBarView: View {
             // Row 1 (no plus button, reserved margin 8)
             let row1Spacing = CGFloat(max(0, row1Tabs.count - 1)) * spacing
             let row1Available = max(0, availableWidth - 8 - row1Spacing)
-            let row1DynamicWidth = row1Available / CGFloat(max(1, row1Tabs.count))
+            let row1DynamicWidth = floor(row1Available / CGFloat(max(1, row1Tabs.count)))
             let row1TabWidth = max(minTabWidth, min(maxTabWidth, row1DynamicWidth))
             let row1Needed = CGFloat(row1Tabs.count) * row1TabWidth + row1Spacing + 8
             let row1NeedsScroll = row1Needed > availableWidth
 
             // Row 2 (with plus button 40)
-            let row2Spacing = CGFloat(max(0, row2Tabs.count - 1)) * spacing
+            let row2Spacing = CGFloat(row2Tabs.count) * spacing
             let row2Available = max(0, availableWidth - reservedPlusWidth - row2Spacing)
-            let row2DynamicWidth = row2Available / CGFloat(max(1, row2Tabs.count))
+            let row2DynamicWidth = floor(row2Available / CGFloat(max(1, row2Tabs.count)))
             let row2TabWidth = max(minTabWidth, min(maxTabWidth, row2DynamicWidth))
             let row2Needed = CGFloat(row2Tabs.count) * row2TabWidth + row2Spacing + reservedPlusWidth
             let row2NeedsScroll = row2Needed > availableWidth
@@ -220,7 +232,7 @@ public struct TabBarView: View {
     }
 
     public var body: some View {
-        let metrics = calculateTabMetrics(availableWidth: availableWidth, tabs: tabManager.tabs)
+        let metrics = calculateTabMetrics(availableWidth: effectiveAvailableWidth, tabs: tabManager.tabs)
 
         VStack(spacing: 0) {
             if metrics.isTwoRows {
@@ -250,6 +262,10 @@ public struct TabBarView: View {
                 )
             }
         }
+        // Fill the proposed width so the measured preference reports the real
+        // window width instead of the tab content width (which would otherwise
+        // lock the tab bar to its initial 800pt and wrap too early).
+        .frame(maxWidth: .infinity)
         .background(
             GeometryReader { geo in
                 Color.clear
@@ -257,11 +273,10 @@ public struct TabBarView: View {
             }
         )
         .onPreferenceChange(TabBarWidthPreferenceKey.self) { newWidth in
-            if newWidth > 0 && newWidth != availableWidth {
-                availableWidth = newWidth
+            if newWidth > 0 && newWidth != measuredWidth {
+                measuredWidth = newWidth
             }
         }
-        .animation(.easeInOut(duration: 0.2), value: metrics.isTwoRows)
         .background(Color(NSColor.windowBackgroundColor))
         .overlay(
             Rectangle()

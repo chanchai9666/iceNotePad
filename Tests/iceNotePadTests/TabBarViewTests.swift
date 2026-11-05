@@ -90,6 +90,70 @@ final class TabBarViewTests: XCTestCase {
         XCTAssertEqual(metrics10.row2Tabs.count, 5)
     }
 
+    func testCalculateTabMetricsWideScreenSupportsManyTabsInSingleRow() {
+        let tabManager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tabBarView = TabBarView(tabManager: tabManager)
+
+        // 13 tabs on a 1600px wide window (like fullscreen or wide monitor) should stay in 1 row
+        let tabs13 = (1...13).map { NoteTab(title: "Tab \($0)") }
+        let metrics13 = tabBarView.calculateTabMetrics(availableWidth: 1600, tabs: tabs13)
+        XCTAssertFalse(metrics13.isTwoRows, "13 tabs should easily fit in 1 row at 1600px width")
+        XCTAssertEqual(metrics13.row1Tabs.count, 13)
+        XCTAssertEqual(metrics13.row2Tabs.count, 0)
+        XCTAssertFalse(metrics13.row1NeedsScroll)
+        XCTAssertGreaterThanOrEqual(metrics13.row1TabWidth, 90)
+        XCTAssertLessThanOrEqual(metrics13.row1TabWidth, 180)
+    }
+
+    func testCalculateTabMetricsRowWidthNeverExceedsAvailableWidthDueToRounding() {
+        let tabManager = TabManager(storageURL: sessionFileURL, autoLoad: false)
+        let tabBarView = TabBarView(tabManager: tabManager)
+
+        for width in stride(from: 600.0, through: 2000.0, by: 100.0) {
+            for count in 1...20 {
+                let tabs = (1...count).map { NoteTab(title: "Tab \($0)") }
+                let metrics = tabBarView.calculateTabMetrics(availableWidth: width, tabs: tabs)
+
+                if !metrics.isTwoRows {
+                    let spacing = CGFloat(count) * 2.0
+                    let tabsTotal = CGFloat(count) * metrics.row1TabWidth
+                    let totalNeeded = tabsTotal + spacing + 40.0
+                    if !metrics.row1NeedsScroll {
+                        XCTAssertLessThanOrEqual(totalNeeded, width + 0.001, "Row 1 total content must not exceed available width (\(width)) for count \(count)")
+                    }
+                } else {
+                    let r1Count = metrics.row1Tabs.count
+                    let r1Spacing = CGFloat(max(0, r1Count - 1)) * 2.0
+                    let r1Total = CGFloat(r1Count) * metrics.row1TabWidth + r1Spacing + 8.0
+                    if !metrics.row1NeedsScroll {
+                        XCTAssertLessThanOrEqual(r1Total, width + 0.001, "Two-row Row 1 total content must not exceed available width (\(width))")
+                    }
+
+                    let r2Count = metrics.row2Tabs.count
+                    let r2Spacing = CGFloat(r2Count) * 2.0
+                    let r2Total = CGFloat(r2Count) * metrics.row2TabWidth + r2Spacing + 40.0
+                    if !metrics.row2NeedsScroll {
+                        XCTAssertLessThanOrEqual(r2Total, width + 0.001, "Two-row Row 2 total content must not exceed available width (\(width))")
+                    }
+                }
+            }
+        }
+    }
+
+    func testTabBarWidthPreferenceKeyReductionPreservesValidWidth() {
+        var value: CGFloat = 0
+        TabBarWidthPreferenceKey.reduce(value: &value) { 1440.0 }
+        XCTAssertEqual(value, 1440.0)
+
+        // Empty branch or default returning 0 must not overwrite the valid value
+        TabBarWidthPreferenceKey.reduce(value: &value) { 0.0 }
+        XCTAssertEqual(value, 1440.0)
+
+        // Subsequent valid update should overwrite
+        TabBarWidthPreferenceKey.reduce(value: &value) { 1600.0 }
+        XCTAssertEqual(value, 1600.0)
+    }
+
     func testTabItemViewTooltipText() {
         let untitledTab = NoteTab(title: "Untitled 1")
         let item1 = TabItemView(tab: untitledTab, isActive: true, onSelect: {}, onClose: {}, onDuplicate: {}, onRename: {})

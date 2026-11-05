@@ -41,61 +41,64 @@ public struct MainWindowView: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            // Tab Bar
-            TabBarView(tabManager: tabManager)
+        GeometryReader { geo in
+            VStack(spacing: 0) {
+                // Tab Bar
+                TabBarView(tabManager: tabManager, availableWidth: geo.size.width)
 
-            // Find and Replace Bar (when Cmd+F is pressed)
-            if isFindPresented, let tabBinding = activeTabBinding {
-                FindReplaceBarView(
-                    isPresented: $isFindPresented,
-                    text: tabBinding.content,
-                    targetRange: $searchTargetRange,
-                    focusTrigger: $findFocusTrigger,
-                    navigationRequest: $findNavigation
-                )
-                .id(tabBinding.wrappedValue.id)
-            }
+                // Find and Replace Bar (when Cmd+F is pressed)
+                if isFindPresented, let tabBinding = activeTabBinding {
+                    FindReplaceBarView(
+                        isPresented: $isFindPresented,
+                        text: tabBinding.content,
+                        targetRange: $searchTargetRange,
+                        focusTrigger: $findFocusTrigger,
+                        navigationRequest: $findNavigation
+                    )
+                    .id(tabBinding.wrappedValue.id)
+                }
 
-            // Text Editor Area
-            if let tabBinding = activeTabBinding, let activeId = tabManager.activeTabId {
-                PlainTextEditorView(
-                    text: tabBinding.content,
-                    searchTargetRange: $searchTargetRange,
-                    fontSize: settings.fontSize,
-                    isMonospace: settings.isMonospace,
-                    wordWrap: settings.wordWrap,
-                    initialCursorPosition: tabBinding.wrappedValue.cursorPosition,
-                    onCursorChange: { line, col in
-                        tabManager.updateCursor(for: activeId, line: line, column: col)
+                // Text Editor Area
+                if let tabBinding = activeTabBinding, let activeId = tabManager.activeTabId {
+                    PlainTextEditorView(
+                        text: tabBinding.content,
+                        searchTargetRange: $searchTargetRange,
+                        fontSize: settings.fontSize,
+                        isMonospace: settings.isMonospace,
+                        wordWrap: settings.wordWrap,
+                        initialCursorPosition: tabBinding.wrappedValue.cursorPosition,
+                        onCursorChange: { line, col in
+                            tabManager.updateCursor(for: activeId, line: line, column: col)
+                        }
+                    )
+                    .id(activeId)
+                    .transition(.opacity)
+                    .background(Color(NSColor.textBackgroundColor))
+                } else {
+                    VStack {
+                        Spacer()
+                        Text("No document open")
+                            .foregroundColor(.secondary)
+                        Button("New Tab") {
+                            tabManager.newTab()
+                        }
+                        .padding(.top, 4)
+                        Spacer()
                     }
-                )
-                .id(activeId)
-                .transition(.opacity)
-                .background(Color(NSColor.textBackgroundColor))
-            } else {
-                VStack {
-                    Spacer()
-                    Text("No document open")
-                        .foregroundColor(.secondary)
-                    Button("New Tab") {
-                        tabManager.newTab()
-                    }
-                    .padding(.top, 4)
-                    Spacer()
+                }
+
+                // Bottom Status Bar
+                if let tab = tabManager.activeTab {
+                    StatusBarView(
+                        line: tab.cursorLine,
+                        column: tab.cursorColumn,
+                        text: tab.content,
+                        encoding: tab.encodingName,
+                        settings: settings
+                    )
                 }
             }
-
-            // Bottom Status Bar
-            if let tab = tabManager.activeTab {
-                StatusBarView(
-                    line: tab.cursorLine,
-                    column: tab.cursorColumn,
-                    text: tab.content,
-                    encoding: tab.encodingName,
-                    settings: settings
-                )
-            }
+            .frame(width: geo.size.width, height: geo.size.height)
         }
         .frame(minWidth: 500, minHeight: 350)
         .animation(.easeInOut(duration: 0.12), value: tabManager.activeTabId)
