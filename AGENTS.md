@@ -55,3 +55,19 @@
 - `./scripts/build_app.sh`: บิลด์ release binary และสร้าง Application bundle `iceNotePad.app`
 - `./scripts/package_release.sh`: สร้าง Release `.dmg` และ `.zip`
 
+---
+
+## Agent skills
+
+### Issue tracker
+
+Issues and specs live as GitHub issues in `chanchai9666/iceNotePad`, managed with the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Five canonical triage roles using their default label strings. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context layout: one `GLOSSARY.md` at the repo root plus `docs/adr/`. See `docs/agents/domain.md`.
+
