@@ -3,7 +3,7 @@ import UniformTypeIdentifiers
 
 @MainActor
 public class FileOperations {
-    public static func showErrorAlert(title: String, message: String, style: NSAlert.Style = .warning) {
+    static func showErrorAlert(title: String, message: String, style: NSAlert.Style = .warning) {
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = message
@@ -11,12 +11,12 @@ public class FileOperations {
         alert.runModal()
     }
 
-    public static func readFileContent(from url: URL) throws -> (content: String, encodingName: String) {
+    public static func readFileContent(from url: URL) throws -> (content: String, encoding: TextEncoding) {
         if let utf8Content = try? String(contentsOf: url, encoding: .utf8) {
-            return (utf8Content, "UTF-8")
+            return (utf8Content, .utf8)
         }
         if let latin1Content = try? String(contentsOf: url, encoding: .isoLatin1) {
-            return (latin1Content, "Western (ISO Latin 1)")
+            return (latin1Content, .isoLatin1)
         }
         throw NSError(
             domain: "iceNotePad.FileOperations",
@@ -25,7 +25,7 @@ public class FileOperations {
         )
     }
 
-    public static func openFile(completion: @escaping (URL, String, String) -> Void) {
+    public static func openFile(completion: @escaping (URL, String, TextEncoding) -> Void) {
         let openPanel = NSOpenPanel()
         openPanel.title = "Open Document"
         openPanel.showsResizeIndicator = true
@@ -38,23 +38,17 @@ public class FileOperations {
         if openPanel.runModal() == .OK, let url = openPanel.url {
             do {
                 let result = try readFileContent(from: url)
-                completion(url, result.content, result.encodingName)
+                completion(url, result.content, result.encoding)
             } catch {
                 showErrorAlert(title: "Failed to open file", message: error.localizedDescription, style: .warning)
             }
         }
     }
 
-    public static func openFile(completion: @escaping (URL, String) -> Void) {
-        openFile { url, content, _ in
-            completion(url, content)
-        }
-    }
-
     public static func saveFile(tab: NoteTab, forceSaveAs: Bool, completion: @escaping (URL) -> Void) {
         if let fileURL = tab.fileURL, !forceSaveAs {
             do {
-                try tab.content.write(to: fileURL, atomically: true, encoding: .utf8)
+                try tab.content.write(to: fileURL, atomically: true, encoding: tab.encoding.stringEncoding)
                 completion(fileURL)
             } catch {
                 showErrorAlert(title: "Failed to save file", message: error.localizedDescription, style: .critical)
@@ -77,7 +71,7 @@ public class FileOperations {
 
         if savePanel.runModal() == .OK, let url = savePanel.url {
             do {
-                try tab.content.write(to: url, atomically: true, encoding: .utf8)
+                try tab.content.write(to: url, atomically: true, encoding: tab.encoding.stringEncoding)
                 completion(url)
             } catch {
                 showErrorAlert(title: "Failed to save file", message: error.localizedDescription, style: .critical)

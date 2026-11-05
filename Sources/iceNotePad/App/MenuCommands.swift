@@ -23,7 +23,7 @@ public struct IceNotePadCommands: Commands {
 
             Button("Open...") {
                 FileOperations.openFile { url, content, encoding in
-                    tabManager.openDocument(url: url, content: content, encodingName: encoding)
+                    tabManager.openDocument(url: url, content: content, encoding: encoding)
                 }
             }
             .keyboardShortcut("o", modifiers: .command)
@@ -31,26 +31,12 @@ public struct IceNotePadCommands: Commands {
             Divider()
 
             Button("Save") {
-                if let active = tabManager.activeTab {
-                    FileOperations.saveFile(tab: active, forceSaveAs: false) { savedURL in
-                        tabManager.markSaved(id: active.id, fileURL: savedURL)
-                        if let idx = tabManager.tabs.firstIndex(where: { $0.id == active.id }) {
-                            tabManager.tabs[idx].encodingName = "UTF-8"
-                        }
-                    }
-                }
+                saveActiveTab(forceSaveAs: false)
             }
             .keyboardShortcut("s", modifiers: .command)
 
             Button("Save As...") {
-                if let active = tabManager.activeTab {
-                    FileOperations.saveFile(tab: active, forceSaveAs: true) { savedURL in
-                        tabManager.markSaved(id: active.id, fileURL: savedURL)
-                        if let idx = tabManager.tabs.firstIndex(where: { $0.id == active.id }) {
-                            tabManager.tabs[idx].encodingName = "UTF-8"
-                        }
-                    }
-                }
+                saveActiveTab(forceSaveAs: true)
             }
             .keyboardShortcut("s", modifiers: [.command, .shift])
 
@@ -107,6 +93,13 @@ public struct IceNotePadCommands: Commands {
                 }
                 .keyboardShortcut(KeyEquivalent(Character(UnicodeScalar(49 + index)!)), modifiers: .command)
             }
+        }
+    }
+
+    private func saveActiveTab(forceSaveAs: Bool) {
+        guard let active = tabManager.activeTab else { return }
+        FileOperations.saveFile(tab: active, forceSaveAs: forceSaveAs) { savedURL in
+            tabManager.markSaved(id: active.id, fileURL: savedURL)
         }
     }
 }

@@ -29,7 +29,7 @@ public class AppSettings: ObservableObject {
         Int((fontSize / defaultFontSize) * 100)
     }
 
-    public func font(for size: CGFloat) -> NSFont {
+    public static func font(size: CGFloat, isMonospace: Bool) -> NSFont {
         if isMonospace {
             return NSFont.monospacedSystemFont(ofSize: size, weight: .regular)
         } else {

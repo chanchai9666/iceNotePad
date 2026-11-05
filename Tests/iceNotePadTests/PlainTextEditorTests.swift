@@ -112,4 +112,21 @@ final class PlainTextEditorTests: XCTestCase {
             effectiveRange: nil
         ))
     }
+
+    func testCharacterOffsetForRestoringCursor() {
+        let textView = PlainTextView()
+        textView.string = "Line 1\nLine 2 text\nLine 3"
+
+        // Start of the document.
+        XCTAssertEqual(textView.characterOffset(for: TextPosition(line: 1, column: 1)), 0)
+        // Start of line 2 ("Line 1\n" = 7 characters).
+        XCTAssertEqual(textView.characterOffset(for: TextPosition(line: 2, column: 1)), 7)
+        // Middle of line 2.
+        XCTAssertEqual(textView.characterOffset(for: TextPosition(line: 2, column: 8)), 14)
+        // Start of line 3.
+        XCTAssertEqual(textView.characterOffset(for: TextPosition(line: 3, column: 1)), 19)
+        // Out-of-range positions clamp instead of trapping.
+        XCTAssertEqual(textView.characterOffset(for: TextPosition(line: 99, column: 1)), textView.string.utf16.count)
+        XCTAssertEqual(textView.characterOffset(for: TextPosition(line: 1, column: 999)), textView.string.utf16.count)
+    }
 }

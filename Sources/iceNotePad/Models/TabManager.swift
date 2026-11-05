@@ -9,6 +9,9 @@ public class TabManager: ObservableObject {
 
     public let storageURL: URL
     private var saveCancellable: AnyCancellable?
+    /// Serialises session writes so an async save queued by the debounce
+    /// cannot race the synchronous save performed on termination.
+    private let saveQueue = DispatchQueue(label: "com.chanchai.iceNotePad.session-save", qos: .utility)
 
     nonisolated public static var defaultStorageURL: URL {
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
@@ -53,7 +56,7 @@ public class TabManager: ObservableObject {
     }
 
     @discardableResult
-    public func newTab(title: String? = nil, content: String = "", fileURL: URL? = nil, encodingName: String = "UTF-8") -> NoteTab {
+    public func newTab(title: String? = nil, content: String = "", fileURL: URL? = nil, encoding: TextEncoding = .utf8) -> NoteTab {
         let tabTitle: String
         if let title = title {
             tabTitle = title
@@ -68,24 +71,23 @@ public class TabManager: ObservableObject {
             content: content,
             fileURL: fileURL,
             isModified: false,
-            encodingName: encodingName
+            encoding: encoding
         )
 
         tabs.append(newTab)
         activeTabId = newTab.id
-        saveSession()
         return newTab
     }
 
-    public func openDocument(url: URL, content: String, encodingName: String = "UTF-8") {
+    public func openDocument(url: URL, content: String, encoding: TextEncoding = .utf8) {
         if let active = activeTab, active.content.isEmpty, active.fileURL == nil {
             updateContent(for: active.id, newContent: content)
             markSaved(id: active.id, fileURL: url)
             if let idx = tabs.firstIndex(where: { $0.id == active.id }) {
-                tabs[idx].encodingName = encodingName
+                tabs[idx].encoding = encoding
             }
         } else {
-            let tab = newTab(title: url.lastPathComponent, content: content, fileURL: url, encodingName: encodingName)
+            let tab = newTab(title: url.lastPathComponent, content: content, fileURL: url, encoding: encoding)
             markSaved(id: tab.id, fileURL: url)
         }
     }
@@ -103,7 +105,6 @@ public class TabManager: ObservableObject {
                 activeTabId = tabs[newIndex].id
             }
         }
-        saveSession()
     }
 
     public func closeCurrentTab() {
@@ -159,7 +160,6 @@ public class TabManager: ObservableObject {
         tabs[index].fileURL = fileURL
         tabs[index].title = fileURL.lastPathComponent
         tabs[index].isModified = false
-        saveSession()
     }
 
     @discardableResult
@@ -175,12 +175,11 @@ public class TabManager: ObservableObject {
             fileURL: nil,
             isModified: true,
             cursorPosition: original.cursorPosition,
-            encodingName: original.encodingName
+            encoding: original.encoding
         )
 
         tabs.insert(duplicated, at: index + 1)
         activeTabId = duplicated.id
-        saveSession()
         return duplicated
     }
 
@@ -206,7 +205,6 @@ public class TabManager: ObservableObject {
         }
 
         tabs[index].title = trimmed
-        saveSession()
     }
 
     private static func isValidFileName(_ name: String) -> Bool {
@@ -217,27 +215,27 @@ public class TabManager: ObservableObject {
     public func saveSession() {
         let state = SessionState(tabs: tabs, activeTabId: activeTabId, untitledCounter: untitledCounter)
         let url = storageURL
-        DispatchQueue.global(qos: .utility).async {
-            do {
-                let dir = url.deletingLastPathComponent()
-                guard FileManager.default.fileExists(atPath: dir.path) || (try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)) != nil else { return }
-                let data = try JSONEncoder().encode(state)
-                try data.write(to: url, options: .atomic)
-            } catch {
-                // Silently ignore write failures if directory was cleaned up or unavailable
-            }
+        saveQueue.async {
+            Self.write(state, to: url)
         }
     }
 
     public func saveSessionSync() {
         let state = SessionState(tabs: tabs, activeTabId: activeTabId, untitledCounter: untitledCounter)
+        let url = storageURL
+        saveQueue.sync {
+            Self.write(state, to: url)
+        }
+    }
+
+    private static func write(_ state: SessionState, to url: URL) {
         do {
-            let dir = storageURL.deletingLastPathComponent()
+            let dir = url.deletingLastPathComponent()
             try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true, attributes: nil)
             let data = try JSONEncoder().encode(state)
-            try data.write(to: storageURL, options: .atomic)
+            try data.write(to: url, options: .atomic)
         } catch {
-            print("Failed to save session: \(error)")
+            // Silently ignore write failures if the directory was cleaned up or unavailable.
         }
     }
 

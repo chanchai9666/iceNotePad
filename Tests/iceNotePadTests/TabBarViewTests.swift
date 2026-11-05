@@ -30,18 +30,6 @@ final class TabBarViewTests: XCTestCase {
         XCTAssertEqual(tabManager.activeTabId, tabManager.tabs.last?.id)
     }
 
-    func testCustomDoubleClickEmptyAreaHandlerIsCalled() {
-        let tabManager = TabManager(storageURL: sessionFileURL, autoLoad: false)
-        var customHandlerCalled = false
-
-        let tabBarView = TabBarView(tabManager: tabManager, onDoubleClickEmptyArea: {
-            customHandlerCalled = true
-        })
-        tabBarView.handleEmptyAreaDoubleClick()
-
-        XCTAssertTrue(customHandlerCalled)
-    }
-
     func testMultipleTabsLayoutRendersWithoutCrash() {
         let tabManager = TabManager(storageURL: sessionFileURL, autoLoad: false)
         for i in 1...15 {

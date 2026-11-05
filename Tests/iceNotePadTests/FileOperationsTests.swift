@@ -23,7 +23,7 @@ final class FileOperationsTests: XCTestCase {
 
         let result = try FileOperations.readFileContent(from: fileURL)
         XCTAssertEqual(result.content, sampleText)
-        XCTAssertEqual(result.encodingName, "UTF-8")
+        XCTAssertEqual(result.encoding, .utf8)
     }
 
     func testReadFileContentISOLatin1Fallback() throws {
@@ -35,7 +35,28 @@ final class FileOperationsTests: XCTestCase {
 
         let result = try FileOperations.readFileContent(from: fileURL)
         XCTAssertFalse(result.content.isEmpty)
-        XCTAssertEqual(result.encodingName, "Western (ISO Latin 1)")
+        XCTAssertEqual(result.encoding, .isoLatin1)
+    }
+
+    func testSaveFilePreservesISOLatin1Encoding() throws {
+        let fileURL = tempDirectory.appendingPathComponent("latin1_doc.txt")
+        let originalText = "café"
+        try originalText.write(to: fileURL, atomically: true, encoding: .isoLatin1)
+
+        let tab = NoteTab(title: "latin1_doc.txt", content: "café", fileURL: fileURL, encoding: .isoLatin1)
+
+        var savedURL: URL?
+        FileOperations.saveFile(tab: tab, forceSaveAs: false) { url in
+            savedURL = url
+        }
+
+        XCTAssertEqual(savedURL, fileURL)
+
+        let data = try Data(contentsOf: fileURL)
+        // ISO Latin 1 writes "é" as a single byte; UTF-8 would need two.
+        XCTAssertEqual(data, Data([0x63, 0x61, 0x66, 0xE9]))
+        XCTAssertEqual(String(data: data, encoding: .isoLatin1), originalText)
+        XCTAssertNil(String(data: data, encoding: .utf8))
     }
 }
 

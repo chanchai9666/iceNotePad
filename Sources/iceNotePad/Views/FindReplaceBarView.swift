@@ -1,10 +1,26 @@
 import SwiftUI
 
+public enum FindNavigationDirection: Equatable, Sendable {
+    case next
+    case previous
+}
+
+public struct FindNavigationRequest: Equatable, Sendable {
+    public let direction: FindNavigationDirection
+    public let token: UUID
+
+    public init(direction: FindNavigationDirection, token: UUID = UUID()) {
+        self.direction = direction
+        self.token = token
+    }
+}
+
 public struct FindReplaceBarView: View {
     @Binding public var isPresented: Bool
     @Binding public var text: String
     @Binding public var targetRange: NSRange?
     @Binding public var focusTrigger: UUID
+    @Binding public var navigationRequest: FindNavigationRequest?
 
     @FocusState private var isSearchFieldFocused: Bool
 
@@ -19,12 +35,14 @@ public struct FindReplaceBarView: View {
         isPresented: Binding<Bool>,
         text: Binding<String>,
         targetRange: Binding<NSRange?> = .constant(nil),
-        focusTrigger: Binding<UUID> = .constant(UUID())
+        focusTrigger: Binding<UUID> = .constant(UUID()),
+        navigationRequest: Binding<FindNavigationRequest?> = .constant(nil)
     ) {
         self._isPresented = isPresented
         self._text = text
         self._targetRange = targetRange
         self._focusTrigger = focusTrigger
+        self._navigationRequest = navigationRequest
     }
 
     private func findMatches() -> [Range<String.Index>] {
@@ -146,7 +164,7 @@ public struct FindReplaceBarView: View {
 
                 // Match count indicator
                 if !searchText.isEmpty {
-                    Text(matchCount > 0 ? "\(currentMatchIndex + 1) of \(matchCount)" : "No matches")
+                    Text(matchCount > 0 ? "Match \(currentMatchIndex + 1) of \(matchCount)" : "No matches")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .frame(minWidth: 70, alignment: .leading)
@@ -257,6 +275,20 @@ public struct FindReplaceBarView: View {
         .onChange(of: focusTrigger) { _ in
             DispatchQueue.main.async {
                 isSearchFieldFocused = true
+            }
+        }
+        .onChange(of: text) { _ in
+            // Keep "Match X of Y" and the highlighted range in sync when the
+            // document changes underneath the find bar.
+            updateMatchCount()
+        }
+        .onChange(of: navigationRequest) { request in
+            guard let request = request else { return }
+            switch request.direction {
+            case .next:
+                selectNextMatch()
+            case .previous:
+                selectPreviousMatch()
             }
         }
     }

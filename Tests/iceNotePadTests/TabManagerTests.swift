@@ -211,7 +211,7 @@ final class TabManagerTests: XCTestCase {
         XCTAssertEqual(manager.tabs.count, 1)
 
         let testFile = tempDirectory.appendingPathComponent("sample.txt")
-        manager.openDocument(url: testFile, content: "File content", encodingName: "UTF-8")
+        manager.openDocument(url: testFile, content: "File content", encoding: .utf8)
 
         XCTAssertEqual(manager.tabs.count, 1)
         XCTAssertEqual(manager.activeTab?.title, "sample.txt")
@@ -226,7 +226,7 @@ final class TabManagerTests: XCTestCase {
         _ = manager.newTab(title: "Draft", content: "Existing content")
 
         let testFile = tempDirectory.appendingPathComponent("another.txt")
-        manager.openDocument(url: testFile, content: "New file content", encodingName: "Western (ISO Latin 1)")
+        manager.openDocument(url: testFile, content: "New file content", encoding: .isoLatin1)
 
         XCTAssertEqual(manager.tabs.count, 2)
         XCTAssertEqual(manager.activeTab?.title, "another.txt")
@@ -275,7 +275,7 @@ final class TabManagerTests: XCTestCase {
 
     func testDuplicateTabPreservesEncoding() {
         let manager = TabManager(storageURL: sessionFileURL, autoLoad: false)
-        let tab = manager.newTab(title: "ISO Doc", content: "Some content", encodingName: "Western (ISO Latin 1)")
+        let tab = manager.newTab(title: "ISO Doc", content: "Some content", encoding: .isoLatin1)
 
         let dup = manager.duplicateTab(id: tab.id)
         XCTAssertNotNil(dup)

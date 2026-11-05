@@ -8,6 +8,7 @@ public struct MainWindowView: View {
     @State private var isFindPresented: Bool = false
     @State private var searchTargetRange: NSRange? = nil
     @State private var findFocusTrigger: UUID = UUID()
+    @State private var findNavigation: FindNavigationRequest? = nil
 
     public init(tabManager: TabManager, settings: AppSettings? = nil) {
         self.tabManager = tabManager
@@ -24,15 +25,17 @@ public struct MainWindowView: View {
                 tabManager.tabs.first(where: { $0.id == activeId }) ?? NoteTab(id: activeId, title: "", content: "")
             },
             set: { updatedTab in
-                if let index = tabManager.tabs.firstIndex(where: { $0.id == activeId }) {
-                    if tabManager.tabs[index].content != updatedTab.content {
-                        var modified = updatedTab
-                        modified.isModified = true
-                        tabManager.tabs[index] = modified
-                    } else {
-                        tabManager.tabs[index] = updatedTab
-                    }
+                guard let index = tabManager.tabs.firstIndex(where: { $0.id == activeId }) else {
+                    return
                 }
+                // Keep the dirty-flag rule in TabManager so the binding does not
+                // re-implement it differently from updateContent(for:newContent:).
+                if tabManager.tabs[index].content != updatedTab.content {
+                    tabManager.updateContent(for: activeId, newContent: updatedTab.content)
+                }
+                var updated = updatedTab
+                updated.isModified = tabManager.tabs[index].isModified
+                tabManager.tabs[index] = updated
             }
         )
     }
@@ -48,7 +51,8 @@ public struct MainWindowView: View {
                     isPresented: $isFindPresented,
                     text: tabBinding.content,
                     targetRange: $searchTargetRange,
-                    focusTrigger: $findFocusTrigger
+                    focusTrigger: $findFocusTrigger,
+                    navigationRequest: $findNavigation
                 )
                 .id(tabBinding.wrappedValue.id)
             }
@@ -61,6 +65,7 @@ public struct MainWindowView: View {
                     fontSize: settings.fontSize,
                     isMonospace: settings.isMonospace,
                     wordWrap: settings.wordWrap,
+                    initialCursorPosition: tabBinding.wrappedValue.cursorPosition,
                     onCursorChange: { line, col in
                         tabManager.updateCursor(for: activeId, line: line, column: col)
                     }
@@ -110,6 +115,18 @@ public struct MainWindowView: View {
                 .opacity(0)
 
                 Button("") {
+                    navigateFind(.next)
+                }
+                .keyboardShortcut("g", modifiers: .command)
+                .opacity(0)
+
+                Button("") {
+                    navigateFind(.previous)
+                }
+                .keyboardShortcut("g", modifiers: [.command, .shift])
+                .opacity(0)
+
+                Button("") {
                     if isFindPresented {
                         withAnimation { isFindPresented = false }
                         searchTargetRange = nil
@@ -119,5 +136,14 @@ public struct MainWindowView: View {
                 .opacity(0)
             }
         )
+    }
+
+    private func navigateFind(_ direction: FindNavigationDirection) {
+        guard isFindPresented else {
+            withAnimation { isFindPresented = true }
+            findFocusTrigger = UUID()
+            return
+        }
+        findNavigation = FindNavigationRequest(direction: direction, token: UUID())
     }
 }

@@ -68,6 +68,26 @@ public class PlainTextView: NSTextView {
             forCharacterRange: range
         )
     }
+
+    /// UTF-16 offset for a one-based line/column pair, clamped to the text length.
+    public func characterOffset(for position: TextPosition) -> Int {
+        let text = self.string as NSString
+        let targetLine = max(1, position.line)
+        var offset = 0
+        var line = 1
+
+        while line < targetLine {
+            let remaining = NSRange(location: offset, length: text.length - offset)
+            let newline = text.range(of: "\n", options: [], range: remaining)
+            if newline.location == NSNotFound {
+                return text.length
+            }
+            offset = newline.location + newline.length
+            line += 1
+        }
+
+        return min(offset + max(0, position.column - 1), text.length)
+    }
 }
 
 public struct PlainTextEditorView: NSViewRepresentable {
@@ -76,6 +96,7 @@ public struct PlainTextEditorView: NSViewRepresentable {
     public var fontSize: Double
     public var isMonospace: Bool
     public var wordWrap: Bool
+    public var initialCursorPosition: TextPosition?
     public var onCursorChange: ((Int, Int) -> Void)?
 
     public init(
@@ -84,6 +105,7 @@ public struct PlainTextEditorView: NSViewRepresentable {
         fontSize: Double = 14.0,
         isMonospace: Bool = true,
         wordWrap: Bool = true,
+        initialCursorPosition: TextPosition? = nil,
         onCursorChange: ((Int, Int) -> Void)? = nil
     ) {
         self._text = text
@@ -91,6 +113,7 @@ public struct PlainTextEditorView: NSViewRepresentable {
         self.fontSize = fontSize
         self.isMonospace = isMonospace
         self.wordWrap = wordWrap
+        self.initialCursorPosition = initialCursorPosition
         self.onCursorChange = onCursorChange
     }
 
@@ -145,11 +168,14 @@ public struct PlainTextEditorView: NSViewRepresentable {
         textView.isAutomaticSpellingCorrectionEnabled = false
         textView.drawsBackground = false
 
-        let font = isMonospace ? NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
-                               : NSFont.systemFont(ofSize: CGFloat(fontSize))
-        textView.font = font
+        textView.font = AppSettings.font(size: CGFloat(fontSize), isMonospace: isMonospace)
         textView.textColor = .textColor
         textView.string = text
+
+        if let initialCursorPosition = initialCursorPosition {
+            let offset = textView.characterOffset(for: initialCursorPosition)
+            textView.setSelectedRange(NSRange(location: offset, length: 0))
+        }
 
         textView.onCursorChange = { line, col in
             context.coordinator.parent.onCursorChange?(line, col)
@@ -169,8 +195,7 @@ public struct PlainTextEditorView: NSViewRepresentable {
         guard let textView = nsView.documentView as? PlainTextView else { return }
 
         // Update font if changed
-        let font = isMonospace ? NSFont.monospacedSystemFont(ofSize: CGFloat(fontSize), weight: .regular)
-                               : NSFont.systemFont(ofSize: CGFloat(fontSize))
+        let font = AppSettings.font(size: CGFloat(fontSize), isMonospace: isMonospace)
         if textView.font?.pointSize != CGFloat(fontSize) || textView.font != font {
             textView.font = font
         }

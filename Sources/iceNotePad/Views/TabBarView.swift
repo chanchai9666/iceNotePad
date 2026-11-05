@@ -9,7 +9,6 @@ public struct TabBarWidthPreferenceKey: PreferenceKey {
 
 public struct TabBarView: View {
     @ObservedObject public var tabManager: TabManager
-    public let onDoubleClickEmptyArea: (() -> Void)?
 
     @State private var availableWidth: CGFloat = 800
     @State private var tabToRename: NoteTab?
@@ -28,17 +27,12 @@ public struct TabBarView: View {
         public let row2NeedsScroll: Bool
     }
 
-    public init(tabManager: TabManager, onDoubleClickEmptyArea: (() -> Void)? = nil) {
+    public init(tabManager: TabManager) {
         self.tabManager = tabManager
-        self.onDoubleClickEmptyArea = onDoubleClickEmptyArea
     }
 
     public func handleEmptyAreaDoubleClick() {
-        if let onDoubleClickEmptyArea = onDoubleClickEmptyArea {
-            onDoubleClickEmptyArea()
-        } else {
-            tabManager.newTab()
-        }
+        tabManager.newTab()
     }
 
     public func calculateTabMetrics(availableWidth: CGFloat, tabs: [NoteTab]) -> TabMetrics {
@@ -82,33 +76,33 @@ public struct TabBarView: View {
             )
         } else {
             let splitIndex = (tabCount + 1) / 2
-            let r1 = Array(tabs[0..<splitIndex])
-            let r2 = Array(tabs[splitIndex..<tabCount])
+            let row1Tabs = Array(tabs[0..<splitIndex])
+            let row2Tabs = Array(tabs[splitIndex..<tabCount])
 
             // Row 1 (no plus button, reserved margin 8)
-            let spacing1 = CGFloat(max(0, r1.count - 1)) * spacing
-            let avail1 = max(0, availableWidth - 8 - spacing1)
-            let dyn1 = avail1 / CGFloat(max(1, r1.count))
-            let w1 = max(minTabWidth, min(maxTabWidth, dyn1))
-            let needed1 = CGFloat(r1.count) * w1 + spacing1 + 8
-            let scroll1 = needed1 > availableWidth
+            let row1Spacing = CGFloat(max(0, row1Tabs.count - 1)) * spacing
+            let row1Available = max(0, availableWidth - 8 - row1Spacing)
+            let row1DynamicWidth = row1Available / CGFloat(max(1, row1Tabs.count))
+            let row1TabWidth = max(minTabWidth, min(maxTabWidth, row1DynamicWidth))
+            let row1Needed = CGFloat(row1Tabs.count) * row1TabWidth + row1Spacing + 8
+            let row1NeedsScroll = row1Needed > availableWidth
 
             // Row 2 (with plus button 40)
-            let spacing2 = CGFloat(max(0, r2.count - 1)) * spacing
-            let avail2 = max(0, availableWidth - reservedPlusWidth - spacing2)
-            let dyn2 = avail2 / CGFloat(max(1, r2.count))
-            let w2 = max(minTabWidth, min(maxTabWidth, dyn2))
-            let needed2 = CGFloat(r2.count) * w2 + spacing2 + reservedPlusWidth
-            let scroll2 = needed2 > availableWidth
+            let row2Spacing = CGFloat(max(0, row2Tabs.count - 1)) * spacing
+            let row2Available = max(0, availableWidth - reservedPlusWidth - row2Spacing)
+            let row2DynamicWidth = row2Available / CGFloat(max(1, row2Tabs.count))
+            let row2TabWidth = max(minTabWidth, min(maxTabWidth, row2DynamicWidth))
+            let row2Needed = CGFloat(row2Tabs.count) * row2TabWidth + row2Spacing + reservedPlusWidth
+            let row2NeedsScroll = row2Needed > availableWidth
 
             return TabMetrics(
                 isTwoRows: true,
-                row1Tabs: r1,
-                row2Tabs: r2,
-                row1TabWidth: w1,
-                row2TabWidth: w2,
-                row1NeedsScroll: scroll1,
-                row2NeedsScroll: scroll2
+                row1Tabs: row1Tabs,
+                row2Tabs: row2Tabs,
+                row1TabWidth: row1TabWidth,
+                row2TabWidth: row2TabWidth,
+                row1NeedsScroll: row1NeedsScroll,
+                row2NeedsScroll: row2NeedsScroll
             )
         }
     }
@@ -130,6 +124,47 @@ public struct TabBarView: View {
     }
 
     @ViewBuilder
+    private func tabItems(_ tabs: [NoteTab], tabWidth: CGFloat) -> some View {
+        ForEach(tabs) { tab in
+            TabItemView(
+                tab: tab,
+                width: tabWidth,
+                isActive: tab.id == tabManager.activeTabId,
+                onSelect: {
+                    withAnimation(.easeInOut(duration: 0.12)) {
+                        tabManager.selectTab(id: tab.id)
+                    }
+                },
+                onClose: {
+                    withAnimation(.easeInOut(duration: 0.12)) {
+                        tabManager.closeTab(id: tab.id)
+                    }
+                },
+                onDuplicate: {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        _ = tabManager.duplicateTab(id: tab.id)
+                    }
+                },
+                onRename: {
+                    tabToRename = tab
+                    renameInput = tab.title
+                    isShowingRenameAlert = true
+                }
+            )
+            .id(tab.id)
+        }
+    }
+
+    private var emptyAreaDoubleClickTarget: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                handleEmptyAreaDoubleClick()
+            }
+    }
+
+    @ViewBuilder
     private func renderTabRow(
         tabs: [NoteTab],
         tabWidth: CGFloat,
@@ -141,34 +176,7 @@ public struct TabBarView: View {
                 ScrollViewReader { proxy in
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 2) {
-                            ForEach(tabs) { tab in
-                                TabItemView(
-                                    tab: tab,
-                                    width: tabWidth,
-                                    isActive: tab.id == tabManager.activeTabId,
-                                    onSelect: {
-                                        withAnimation(.easeInOut(duration: 0.12)) {
-                                            tabManager.selectTab(id: tab.id)
-                                        }
-                                    },
-                                    onClose: {
-                                        withAnimation(.easeInOut(duration: 0.12)) {
-                                            tabManager.closeTab(id: tab.id)
-                                        }
-                                    },
-                                    onDuplicate: {
-                                        withAnimation(.easeInOut(duration: 0.15)) {
-                                            _ = tabManager.duplicateTab(id: tab.id)
-                                        }
-                                    },
-                                    onRename: {
-                                        tabToRename = tab
-                                        renameInput = tab.title
-                                        isShowingRenameAlert = true
-                                    }
-                                )
-                                .id(tab.id)
-                            }
+                            tabItems(tabs, tabWidth: tabWidth)
 
                             if showPlusButton {
                                 newTabButton
@@ -185,36 +193,18 @@ public struct TabBarView: View {
                         }
                     }
                 }
+
+                // Keep a narrow strip available for double-click even when the
+                // tabs are full and the row has to scroll.
+                Color.clear
+                    .frame(width: 28)
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) {
+                        handleEmptyAreaDoubleClick()
+                    }
             } else {
                 HStack(spacing: 2) {
-                    ForEach(tabs) { tab in
-                        TabItemView(
-                            tab: tab,
-                            width: tabWidth,
-                            isActive: tab.id == tabManager.activeTabId,
-                            onSelect: {
-                                withAnimation(.easeInOut(duration: 0.12)) {
-                                    tabManager.selectTab(id: tab.id)
-                                }
-                            },
-                            onClose: {
-                                withAnimation(.easeInOut(duration: 0.12)) {
-                                    tabManager.closeTab(id: tab.id)
-                                }
-                            },
-                            onDuplicate: {
-                                withAnimation(.easeInOut(duration: 0.15)) {
-                                    _ = tabManager.duplicateTab(id: tab.id)
-                                }
-                            },
-                            onRename: {
-                                tabToRename = tab
-                                renameInput = tab.title
-                                isShowingRenameAlert = true
-                            }
-                        )
-                        .id(tab.id)
-                    }
+                    tabItems(tabs, tabWidth: tabWidth)
 
                     if showPlusButton {
                         newTabButton
@@ -223,13 +213,7 @@ public struct TabBarView: View {
                 .padding(.horizontal, 4)
                 .padding(.vertical, 4)
 
-                // Empty area for double-click
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        handleEmptyAreaDoubleClick()
-                    }
+                emptyAreaDoubleClickTarget
             }
         }
         .frame(height: 34)

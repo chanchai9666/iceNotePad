@@ -17,7 +17,10 @@ public struct NoteTab: Identifiable, Codable, Equatable, Sendable {
     public var fileURL: URL?
     public var isModified: Bool
     public var cursorPosition: TextPosition
-    public var encodingName: String
+    public var encoding: TextEncoding
+
+    /// User-facing encoding name, kept for the status bar and legacy call sites.
+    public var encodingName: String { encoding.rawValue }
 
     public var cursorLine: Int {
         get { cursorPosition.line }
@@ -41,7 +44,7 @@ public struct NoteTab: Identifiable, Codable, Equatable, Sendable {
         fileURL: URL? = nil,
         isModified: Bool = false,
         cursorPosition: TextPosition = TextPosition(line: 1, column: 1),
-        encodingName: String = "UTF-8"
+        encoding: TextEncoding = .utf8
     ) {
         self.id = id
         self.title = title
@@ -49,7 +52,7 @@ public struct NoteTab: Identifiable, Codable, Equatable, Sendable {
         self.fileURL = fileURL
         self.isModified = isModified
         self.cursorPosition = cursorPosition
-        self.encodingName = encodingName
+        self.encoding = encoding
     }
 
     public init(
@@ -60,7 +63,7 @@ public struct NoteTab: Identifiable, Codable, Equatable, Sendable {
         isModified: Bool = false,
         cursorLine: Int = 1,
         cursorColumn: Int = 1,
-        encodingName: String = "UTF-8"
+        encoding: TextEncoding = .utf8
     ) {
         self.init(
             id: id,
@@ -69,7 +72,7 @@ public struct NoteTab: Identifiable, Codable, Equatable, Sendable {
             fileURL: fileURL,
             isModified: isModified,
             cursorPosition: TextPosition(line: cursorLine, column: cursorColumn),
-            encodingName: encodingName
+            encoding: encoding
         )
     }
 
@@ -89,7 +92,7 @@ public struct NoteTab: Identifiable, Codable, Equatable, Sendable {
             self.cursorPosition = TextPosition(line: line, column: col)
         }
 
-        self.encodingName = try container.decodeIfPresent(String.self, forKey: .encodingName) ?? "UTF-8"
+        self.encoding = TextEncoding(rawValue: try container.decodeIfPresent(String.self, forKey: .encodingName) ?? "") ?? .utf8
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -100,7 +103,7 @@ public struct NoteTab: Identifiable, Codable, Equatable, Sendable {
         try container.encodeIfPresent(fileURL, forKey: .fileURL)
         try container.encode(isModified, forKey: .isModified)
         try container.encode(cursorPosition, forKey: .cursorPosition)
-        try container.encode(encodingName, forKey: .encodingName)
+        try container.encode(encoding.rawValue, forKey: .encodingName)
     }
 
     public static func == (lhs: NoteTab, rhs: NoteTab) -> Bool {
@@ -110,7 +113,7 @@ public struct NoteTab: Identifiable, Codable, Equatable, Sendable {
                lhs.fileURL == rhs.fileURL &&
                lhs.isModified == rhs.isModified &&
                lhs.cursorPosition == rhs.cursorPosition &&
-               lhs.encodingName == rhs.encodingName
+               lhs.encoding == rhs.encoding
     }
 }
 
